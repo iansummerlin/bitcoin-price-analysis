@@ -1,0 +1,23 @@
+# Ignore virtual environment files and directories
+
+bin/
+include/
+lib/
+lib64/
+pyvenv.cfg
+
+# Ignore PNG files
+*.png
+
+# Ignore Python bytecode files
+
+**pycache**
+*.pyc
+
+# Ignore IDE-specific files (Optional)
+
+.idea/
+.vscode/
+
+# Ignore btc price data
+BTCUSD_1H.csv
