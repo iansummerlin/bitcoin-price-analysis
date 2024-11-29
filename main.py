@@ -7,7 +7,7 @@ Sourced daily fear and greed index from alternative.me.
 Steps:
 1. Download and prepare data
 2. Select target variable (close)
-3. Feature engineering (lagged close, moving averages, rsi, volatility, fear and greed index)
+3. Feature engineering (lagged close, moving averages, rsi, volatility, volume, fear and greed index)
 4. Train-test split
 5. Model training
 6. Evaluate and plot
@@ -18,7 +18,6 @@ Minor Improvements
 apropriate model can be fitted. You can use GridSearch or a similar approach to find the 
 best combination of these parameters.
 - Aim for 10-20 features.
-- I can't imagine the way I calculate the RSI is very performant. 
 - Drop or transform less significant features like `parkinson_volatility`
 - Explore adding more leading indicators (e.g. MACD, Bollinger Bands)
 - Address heteroskedasticity with GARCH to better model volatility clustering
@@ -46,7 +45,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+import time  # Add this import at the top
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -112,6 +113,7 @@ def merge_sentiment_data(df):
     df = df.merge(sentiment_df, how='left', left_index=True, right_index=True)
     df[['fng_value', 'fng_classification']] = df[['fng_value', 'fng_classification']].fillna(method='ffill')
     df = df.dropna(subset=['fng_value', 'fng_classification'])
+    df = df.ffill() # Fill the daily sentiment data across the hourly price data
     print("Sentiment data merged with BTCUSD price data")
     return df
 
@@ -133,36 +135,6 @@ def generate_btcusd_closing_price_graph(df):
     plt.savefig(BTC_CLOSING_PRICE_CHART_PATH)
     print(f"Bitcoin Closing Price graph generated and saved as {BTC_CLOSING_PRICE_CHART_PATH}")
     print_divider()
-
-def calculate_sharpe_ratio(df, risk_free_rate=0.01):
-    """
-    Calculate the Sharpe ratio for the given DataFrame of closing prices.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing closing prices.
-    risk_free_rate (float): The risk-free rate to use in the calculation (default is 0.01).
-
-    Returns:
-    float: The calculated Sharpe ratio.
-    """
-    df['daily_return'] = df['close'].pct_change()
-    average_daily_return = df['daily_return'].mean()
-    std_daily_return = df['daily_return'].std()
-    sharpe_ratio = (average_daily_return - risk_free_rate / 252) / std_daily_return
-    return sharpe_ratio
-
-def calculate_parkinson_volatility(df):
-    """
-    Calculate the Parkinson volatility for the given DataFrame.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
-
-    Returns:
-    Series: A Series containing the Parkinson volatility values.
-    """
-    df['parkinson_volatility'] = np.sqrt((1 / (4 * np.log(2))) * (df['high'] - df['low'])**2 / df['close'].shift(1)**2)
-    return df['parkinson_volatility']
 
 def calculate_rsi(df, window_length=14):
     """Calculate the Relative Strength Index (RSI)."""
@@ -210,6 +182,19 @@ def create_lagged_close_price_features(df, lags):
         df[f"close_lag_{lag}"] = df['close'].shift(lag)
     return df
 
+def calculate_obv(df):
+    """Calculate On-Balance Volume (OBV)."""
+    obv = np.zeros(len(df))
+    for i in range(1, len(df)):
+        if df['close'].iloc[i] > df['close'].iloc[i - 1]:
+            obv[i] = obv[i - 1] + df['Volume BTC'].iloc[i]
+        elif df['close'].iloc[i] < df['close'].iloc[i - 1]:
+            obv[i] = obv[i - 1] - df['Volume BTC'].iloc[i]
+        else:
+            obv[i] = obv[i - 1]
+    df['obv'] = obv
+    return df['obv']
+
 def feature_engineering(df):
     """
     Perform feature engineering on the DataFrame.
@@ -220,16 +205,18 @@ def feature_engineering(df):
     Returns:
     DataFrame: The DataFrame with engineered features.
     """
-
-    # Technical Indicators
+    # Price
     lagged_features = [90, 120]
     df = create_lagged_close_price_features(df, lagged_features)
     calculate_moving_averages(df)
     df['rsi'] = calculate_rsi(df)
-    df['sharpe_ratio'] = calculate_sharpe_ratio(df)
+
+    # Volatility
     calculate_volatility(df)
     calculate_average_true_range(df)
-    df['parkinson_volatility'] = calculate_parkinson_volatility(df)
+
+    # Volume
+    calculate_obv(df)
 
     # Drop rows with missing values
     df = df.dropna()
@@ -265,8 +252,13 @@ def train_arima_model(train, exog_columns):
     p = 5  # AR lag
     d = 1  # Differencing
     q = 0  # MA lag
+    
+    start_time = time.time()  # Start timer
     model = ARIMA(train['close'], order=(p, d, q), exog=train[exog_columns]) 
     arima_model = model.fit()
+    end_time = time.time()  # End timer
+    
+    print(f"Model training time: {end_time - start_time:.2f} seconds")  # Print training time
     print(arima_model.summary())
     return arima_model
 
@@ -311,18 +303,12 @@ def main():
     # Merge sentiment data
     df = merge_sentiment_data(df)
     
-    # Handle missing df
-    df = df.ffill()
-    
     # Generate closing price graph
     generate_btcusd_closing_price_graph(df)
 
     # Feature engineering
     df = feature_engineering(df)
 
-    # Train-test split
-    train, test = train_test_split(df)
-    
     # Define exogenous variables
     exog_columns = [
         'close_lag_90', 
@@ -332,11 +318,15 @@ def main():
         'rsi',
         'volatility_24', 
         'volatility_ewma_24',
-        'parkinson_volatility',
         'atr_24',
         'fng_value',
-        'sharpe_ratio'
+        'obv'
     ]
+
+    df[exog_columns] = StandardScaler().fit_transform(df[exog_columns])
+
+    # Train-test split
+    train, test = train_test_split(df)
 
     # Train ARIMA model
     arima_model = train_arima_model(train, exog_columns)
