@@ -10,23 +10,23 @@ Steps
 6. Evaluate and plot
 
 Minor Improvements
-- More sophisticated volatility measurements
-- More laggged close variables (beyond 90 or 120) to capture longer-term dependencies
 - Additional exogenous variables such as market sentiment, new data or technical indicators
-(e.g. RSI or MACD) 
-- RMSE (3966) and MAE (3044), these are still pretty high
+(e.g. RSI or MACD).
+- Work on getting the RMSE and MAE down
 - Tune ARIMA order: consider experimenting with different values of p, d and q to see if more 
 apropriate model can be fitted. You can use GridSearch or a similar approach to find the 
-best combination of these parameters
+best combination of these parameters.
+- Aim for 10-20 features.
 
 Major Improvements
 - You could combine this model with machine learning models like Random Forests or XGBoost, 
 which might capture non-inear patterns better.
 - Use other advanced models such as GARCH for volatility modeling or LSTM (Long Short-Term Memory) 
-Networks for capturing long-term dependencies in time-series forecasting
+Networks for capturing long-term dependencies in time-series forecasting.
+- For a more sophisticated model I should be using 10-20 features.
 
-Current version: 1.0.7
-Last updated: 27/11/2024 00:26
+Current version: 1.0.9
+Last updated: 29/11/2024 00:29
 Author: Ian Summerlin
 """
 import os
@@ -107,95 +107,135 @@ def generate_btcusd_closing_price_graph(df):
     print (f"Bitcoin Closing Price graph generated and saved as {BTC_CLOSING_PRICE_CHART_PATH}")
     print_divider()
     
-"""
-Download and prepare initial data
-"""
-
-# Download and import df
-download_btcusd_file()
-df = pd.read_csv(BTC_PRICEDATA_PATH, index_col=0)
-
-# Convert date to datetime object, drop column `symbol` and sort
-df['date'] = pd.to_datetime(df['date'])
-df.set_index('date', inplace=True)
-df.drop(columns=['symbol'], inplace=True)
-df = df.sort_index()
-
-# Select target variable
-target = df['close']
-
-# Handle missing df
-df = df.ffill()
-
-# If hourly df is too noisy you can resamplet to a higher timeframe (e.g. daily)
-# df = df.resample('D').mean() 
-
-generate_btcusd_closing_price_graph(df)
-
-"""
-Feature engineering
-Basic time-series models like ARIMA work on raw `close` df, you can improve the accuracy
-by adding features
-"""
-
-# Generate lagged version of `close`
-for lag in range(1, 121):
-    df[f"close_lag_{lag}"] = df['close'].shift(lag)
+def main():
+    """
+    main
+    This will handle all of the steps to download, format, add features, train and evaluate
+    the price analysis model of BTCUSD
+    """
     
-# Moving averages (7 hour and 24 hour moving average)
-df['MA_7'] = df['close'].rolling(window=7).mean()
-df['MA_24'] = df['close'].rolling(window=24).mean()
+    print("Preparing model...")
+    
+    """
+    Download and prepare initial data
+    """
 
-# Volatility measured using rolling standard deviation
-df['volatility_24'] = df['close'].rolling(window=24).std()
+    # Download and import df
+    download_btcusd_file()
+    df = pd.read_csv(BTC_PRICEDATA_PATH, index_col=0)
 
-# Drop rows with missing values due to lagging
-df = df.dropna()
+    # Convert date to datetime object, drop column `symbol` and sort
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date', inplace=True)
+    df.drop(columns=['symbol'], inplace=True)
+    df = df.sort_index()
 
-"""
-Train-test split
-"""
-train_size = int(len(df) * 0.8)
-train = df.iloc[:train_size]
-test = df.iloc[train_size:]
-exog_columns = ['close_lag_90', 'close_lag_120', 'MA_7', 'MA_24', 'volatility_24']
+    # Select target variable
+    target = df['close']
 
-X_train = train[exog_columns]
-y_train = df['close'][:train_size]
-X_test = test[exog_columns]
-y_test = df['close'][train_size:]
+    # Handle missing df
+    df = df.ffill()
 
-"""
-Model training
-"""
+    # If hourly df is too noisy you can resamplet to a higher timeframe (e.g. daily)
+    # df = df.resample('D').mean() 
 
-# Fit ARIMA (adjust p, d, q values) using exogenous variables
-p = 5
-d = 1
-q = 0
-model = ARIMA(train['close'], order=(p, d, q), exog=X_train) 
-arima_model = model.fit()
-print(arima_model.summary())
+    generate_btcusd_closing_price_graph(df)
 
-# Forecast for the test period
-exog_test = X_test[exog_columns]
-forecast = arima_model.forecast(steps=len(test), exog=X_test)
+    """
+    Feature engineering
+    Basic time-series models like ARIMA work on raw `close` df, you can improve the accuracy
+    by adding features
+    """
 
-# Evaluate (compare predictions with actual `close` prices using RMSE)
-rmse = np.sqrt(mean_squared_error(y_test, forecast))
-mae = mean_absolute_error(y_test, forecast)
-print('RMSE:', rmse)
-print ('MAE:', mae)
-print_divider()
+    # Generate lagged version of `close`
+    for lag in [90, 120]:
+        df[f"close_lag_{lag}"] = df['close'].shift(lag)
+        
+    # Moving averages (7 hour and 24 hour moving average)
+    df['MA_7'] = df['close'].rolling(window=7).mean()
+    df['MA_24'] = df['close'].rolling(window=24).mean()
 
-# Plot predictions vs actual values
-plt.figure(figsize=(10, 6))
-plt.plot(y_test.index, y_test, label='Actual Prices', color='blue')
-plt.plot(y_test.index, forecast, label='Forecasted Prices', color='orange')
-plt.title('Bitcoin Price Prediction using ARIMA')
-plt.xlabel('Date')
-plt.ylabel('Closing Price')
-plt.legend()
-plt.savefig(BTC_ACTUAL_VS_PREDICTED_CHART_PATH)
-print(f"Chart saved as {BTC_ACTUAL_VS_PREDICTED_CHART_PATH}")
+    # Volatility measured using rolling standard deviation
+    df['volatility_24'] = df['close'].rolling(window=24).std()
+    
+    # Volatility measured with ewma
+    df['volatility_ewma_24'] = df['close'].ewm(span=24).std()
+    
+    # Parkinson volatility
+    df['parkinson_volatility'] = (1 / (4 * np.log(2))) * ((np.log(df['high'] / df['low'])) ** 2).rolling(window=24).mean()
+    
+    # Average true range
+    # Shift the 'close' column once before using it in the lambda function
+    df['shifted_close'] = df['close'].shift(1)
 
+    # Now, use the shifted column inside the apply function
+    df['true_range'] = df[['high', 'low', 'close', 'shifted_close']].apply(
+        lambda row: max(
+            row['high'] - row['low'], 
+            abs(row['high'] - row['shifted_close']), 
+            abs(row['low'] - row['shifted_close'])
+        ), axis=1
+    )    
+    df['atr_24'] = df['true_range'].rolling(window=24).mean()
+    
+    # Drop 'shifted_close' and rows with missing values due to lagging
+    df = df.dropna()
+    
+    """
+    Train-test split (80% training data, 20% testing data)
+    """
+    train_size = int(len(df) * 0.8)
+    train = df.iloc[:train_size]
+    test = df.iloc[train_size:]
+    exog_columns = [
+        'close_lag_90', 
+        'close_lag_120', 
+        'MA_7', 
+        'MA_24', 
+        'volatility_24', 
+        'volatility_ewma_24',
+        'parkinson_volatility',
+        'atr_24',
+    ]
+
+    X_train = train[exog_columns]
+    y_train = train['close']
+    X_test = test[exog_columns]
+    y_test = test['close']
+    
+    """
+    Model training
+    """
+
+    # Fit ARIMA (adjust p, d, q values) using exogenous variables
+    p = 5 # AR lag
+    d = 1 # Differencing
+    q = 0 # MA lag
+    model = ARIMA(y_train, order=(p, d, q), exog=X_train) 
+    arima_model = model.fit()
+    print(arima_model.summary())
+
+    # Forecast for the test period
+    forecast = arima_model.forecast(steps=len(test), exog=X_test)
+
+    # Evaluate (compare predictions with actual `close` prices using RMSE)
+    rmse = np.sqrt(mean_squared_error(y_test, forecast))
+    mae = mean_absolute_error(y_test, forecast)
+    print('RMSE:', rmse)
+    print ('MAE:', mae)
+    print_divider()
+
+    # Plot predictions vs actual values
+    plt.figure(figsize=(10, 6))
+    plt.plot(y_test.index, y_test, label='Actual Prices', color='blue')
+    plt.plot(y_test.index, forecast, label='Forecasted Prices', color='orange')
+    plt.title('Bitcoin Price Prediction using ARIMA')
+    plt.xlabel('Date')
+    plt.ylabel('Closing Price')
+    plt.legend()
+    plt.savefig(BTC_ACTUAL_VS_PREDICTED_CHART_PATH)
+    print(f"Chart saved as {BTC_ACTUAL_VS_PREDICTED_CHART_PATH}")
+
+# Execute script
+if __name__ == "__main__":
+    main()
