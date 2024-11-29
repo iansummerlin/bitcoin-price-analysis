@@ -1,9 +1,10 @@
 """
 Time series forecasting for BTC/USD. 
+
 Sourced 1h timeseries df from Gemini.
 Sourced daily fear and greed index from alternative.me.
 
-Steps
+Steps:
 1. Download and prepare data
 2. Select target variable (close)
 3. Feature engineering (lagged close, moving averages, rsi, volatility, fear and greed index)
@@ -29,6 +30,11 @@ which might capture non-inear patterns better.
 - Use other advanced models such as GARCH for volatility modeling or LSTM (Long Short-Term Memory) 
 Networks for capturing long-term dependencies in time-series forecasting.
 - For a more sophisticated model I should be using 10-20 features.
+
+Misc Improvements
+- Download merged csv so it doesn't need to be generated on each run of the model
+- Split out the feature calculations into different functions > create a folder called
+features > include each function as a file inside the folder and import here.
 
 Current version: 1.1.1
 Last updated: 29/11/2024 19:54
@@ -158,6 +164,52 @@ def calculate_parkinson_volatility(df):
     df['parkinson_volatility'] = np.sqrt((1 / (4 * np.log(2))) * (df['high'] - df['low'])**2 / df['close'].shift(1)**2)
     return df['parkinson_volatility']
 
+def calculate_rsi(df, window_length=14):
+    """Calculate the Relative Strength Index (RSI)."""
+    delta = df['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=window_length).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=window_length).mean()
+    rs = gain / loss
+    df['rsi'] = 100 - (100 / (1 + rs))
+    return df['rsi']
+
+def calculate_moving_averages(df):
+    """Calculate moving averages."""
+    df['MA_7'] = df['close'].rolling(window=7).mean()
+    df['MA_24'] = df['close'].rolling(window=24).mean()
+
+def calculate_volatility(df):
+    """Calculate volatility measures."""
+    df['volatility_24'] = df['close'].rolling(window=24).std()
+    df['volatility_ewma_24'] = df['close'].ewm(span=24).std()
+
+def calculate_average_true_range(df):
+    """Calculate the Average True Range (ATR)."""
+    df['shifted_close'] = df['close'].shift(1)
+    df['true_range'] = df[['high', 'low', 'close', 'shifted_close']].apply(
+        lambda row: max(
+            row['high'] - row['low'], 
+            abs(row['high'] - row['shifted_close']), 
+            abs(row['low'] - row['shifted_close'])
+        ), axis=1
+    )    
+    df['atr_24'] = df['true_range'].rolling(window=24).mean()
+
+def create_lagged_close_price_features(df, lags):
+    """
+    Create lagged features for the 'close' price.
+
+    Parameters:
+    df (DataFrame): The DataFrame containing BTCUSD price data.
+    lags (list): A list of lag periods to create features for.
+
+    Returns:
+    DataFrame: The DataFrame with lagged close price features added.
+    """
+    for lag in lags:
+        df[f"close_lag_{lag}"] = df['close'].shift(lag)
+    return df
+
 def feature_engineering(df):
     """
     Perform feature engineering on the DataFrame.
@@ -168,47 +220,20 @@ def feature_engineering(df):
     Returns:
     DataFrame: The DataFrame with engineered features.
     """
-    # Generate lagged version of `close`
-    for lag in [90, 120]:
-        df[f"close_lag_{lag}"] = df['close'].shift(lag)
-        
-    # Moving averages
-    df['MA_7'] = df['close'].rolling(window=7).mean()
-    df['MA_24'] = df['close'].rolling(window=24).mean()
-    
-    # RSI
-    window_length = 14
-    df['change'] = df['close'].diff()
-    df['gain'] = df['change'].apply(lambda x: x if x > 0 else 0)
-    df['loss'] = df['change'].apply(lambda x: -x if x < 0 else 0)
-    df['avg_gain'] = df['gain'].rolling(window=window_length, min_periods=1).mean()
-    df['avg_loss'] = df['loss'].rolling(window=window_length, min_periods=1).mean()
-    df['rsi'] = 100 - (100 / (1 + (df['avg_gain'] / df['avg_loss'])))
-    
-    # Volatility
-    df['volatility_24'] = df['close'].rolling(window=24).std()
-    df['volatility_ewma_24'] = df['close'].ewm(span=24).std()
-    
-    # Average true range
-    df['shifted_close'] = df['close'].shift(1)
-    df['true_range'] = df[['high', 'low', 'close', 'shifted_close']].apply(
-        lambda row: max(
-            row['high'] - row['low'], 
-            abs(row['high'] - row['shifted_close']), 
-            abs(row['low'] - row['shifted_close'])
-        ), axis=1
-    )    
-    df['atr_24'] = df['true_range'].rolling(window=24).mean()
-    
-    # Calculate Parkinson volatility
+
+    # Technical Indicators
+    lagged_features = [90, 120]
+    df = create_lagged_close_price_features(df, lagged_features)
+    calculate_moving_averages(df)
+    df['rsi'] = calculate_rsi(df)
+    df['sharpe_ratio'] = calculate_sharpe_ratio(df)
+    calculate_volatility(df)
+    calculate_average_true_range(df)
     df['parkinson_volatility'] = calculate_parkinson_volatility(df)
 
-    # Calculate Sharpe ratio
-    df['sharpe_ratio'] = calculate_sharpe_ratio(df)
-    
     # Drop rows with missing values
     df = df.dropna()
-    
+
     return df
 
 def train_test_split(df):
