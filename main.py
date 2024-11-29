@@ -18,6 +18,10 @@ apropriate model can be fitted. You can use GridSearch or a similar approach to 
 best combination of these parameters.
 - Aim for 10-20 features.
 - I can't imagine the way I calculate the RSI is very performant. 
+- Drop or transform less significant features like `parkinson_volatility`
+- Explore adding more leading indicators (e.g. MACD, Bollinger Bands)
+- Address heteroskedasticity with GARCH to better model volatility clustering
+- Use LSTM or GRU models for long-sequence time series if computational resources permit
 
 Major Improvements
 - You could combine this model with machine learning models like Random Forests or XGBoost, 
