@@ -1,5 +1,7 @@
 """
-Time series forecasting for BTC/USD. Sourced 1h timeseries df from Gemini.
+Time series forecasting for BTC/USD. 
+Sourced 1h timeseries df from Gemini.
+Sourced daily fear and greed index from alternative.me.
 
 Steps
 1. Download and prepare data
