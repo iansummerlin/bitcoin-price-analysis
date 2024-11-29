@@ -4,7 +4,7 @@ Time series forecasting for BTC/USD. Sourced 1h timeseries df from Gemini.
 Steps
 1. Download and prepare data
 2. Select target variable (close)
-3. Feature engineering (lagged close, moving averages and volatility)
+3. Feature engineering (lagged close, moving averages, rsi and volatility)
 4. Train-test split
 5. Model training
 6. Evaluate and plot
@@ -17,6 +17,7 @@ Minor Improvements
 apropriate model can be fitted. You can use GridSearch or a similar approach to find the 
 best combination of these parameters.
 - Aim for 10-20 features.
+- I can't imagine the way I calculate the RSI is very performant. 
 
 Major Improvements
 - You could combine this model with machine learning models like Random Forests or XGBoost, 
@@ -25,8 +26,8 @@ which might capture non-inear patterns better.
 Networks for capturing long-term dependencies in time-series forecasting.
 - For a more sophisticated model I should be using 10-20 features.
 
-Current version: 1.0.9
-Last updated: 29/11/2024 00:29
+Current version: 1.0.10
+Last updated: 29/11/2024 00:43
 Author: Ian Summerlin
 """
 import os
@@ -154,6 +155,15 @@ def main():
     # Moving averages (7 hour and 24 hour moving average)
     df['MA_7'] = df['close'].rolling(window=7).mean()
     df['MA_24'] = df['close'].rolling(window=24).mean()
+    
+    # RSI
+    window_length = 14 # Typical RSI window
+    df['change'] = df['close'].diff()
+    df['gain'] = df['change'].apply(lambda x: x if x > 0 else 0)
+    df['loss'] = df['change'].apply(lambda x: -x if x < 0 else 0)
+    df['avg_gain'] = df['gain'].rolling(window=window_length, min_periods=1).mean()
+    df['avg_loss'] = df['loss'].rolling(window=window_length, min_periods=1).mean()
+    df['rsi'] = 100 - (100 / (1 + (df['avg_gain'] / df['avg_loss'])))
 
     # Volatility measured using rolling standard deviation
     df['volatility_24'] = df['close'].rolling(window=24).std()
@@ -192,6 +202,7 @@ def main():
         'close_lag_120', 
         'MA_7', 
         'MA_24', 
+        'rsi',
         'volatility_24', 
         'volatility_ewma_24',
         'parkinson_volatility',
