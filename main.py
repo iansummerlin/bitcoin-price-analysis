@@ -4,14 +4,12 @@ Time series forecasting for BTC/USD. Sourced 1h timeseries df from Gemini.
 Steps
 1. Download and prepare data
 2. Select target variable (close)
-3. Feature engineering (lagged close, moving averages, rsi and volatility)
+3. Feature engineering (lagged close, moving averages, rsi, volatility, fear and greed index)
 4. Train-test split
 5. Model training
 6. Evaluate and plot
 
 Minor Improvements
-- Additional exogenous variables such as market sentiment, new data or technical indicators
-(e.g. RSI or MACD).
 - Work on getting the RMSE and MAE down
 - Tune ARIMA order: consider experimenting with different values of p, d and q to see if more 
 apropriate model can be fitted. You can use GridSearch or a similar approach to find the 
@@ -30,8 +28,8 @@ which might capture non-inear patterns better.
 Networks for capturing long-term dependencies in time-series forecasting.
 - For a more sophisticated model I should be using 10-20 features.
 
-Current version: 1.0.10
-Last updated: 29/11/2024 00:43
+Current version: 1.1.0
+Last updated: 29/11/2024 19:54
 Author: Ian Summerlin
 """
 import os
@@ -47,6 +45,9 @@ warnings.filterwarnings("ignore")
 
 BTC_PRICEDATA_1H_URL = "https://www.cryptodatadownload.com/cdd/Gemini_BTCUSD_1h.csv"
 BTC_PRICEDATA_PATH = "BTCUSD_1H.csv"
+BTC_SENTIMENTDATA_URL = "https://api.alternative.me/fng/?limit=250000&format=csv&date_format=kr"
+BTC_SENTIMENTDATA_PATH = "BTC_sentiment.csv"
+
 BTC_CLOSING_PRICE_CHART_PATH = "bitcoin-closing-price.png"
 BTC_ACTUAL_VS_PREDICTED_CHART_PATH = "bitcoin-actual-vs-predicted-price.png"
 
@@ -91,6 +92,70 @@ def download_btcusd_file():
         
     print(f"File downloaded and saved as {BTC_PRICEDATA_PATH}")
 
+def download_btc_sentiment_data():
+    """
+    download_btc_sentiment_data
+    This file will check if the BTC/USD sentiment data exists
+    - if it does: it will skip
+    - if it doesn't: it will download
+    
+    Date range
+    2018-01-02 - 2024-11-24
+    
+    NOTE: Don't forget to trim the results manually to the date range above and 
+    sort out the headers.
+    """
+    
+    # Check if the file already exists
+    print_divider()
+    print("Downloading BTCUSD sentiment df...")
+    if os.path.exists(BTC_SENTIMENTDATA_PATH):
+        print(f"The file '{BTC_SENTIMENTDATA_PATH}' already exists.")
+        return
+    
+    # Send a GET request to the URL
+    print(f"Downloading the file from {BTC_SENTIMENTDATA_URL}...")
+    response = requests.get(BTC_SENTIMENTDATA_URL)
+    
+    # Check if the request was successful (status code 200)
+    if response.status_code != 200:
+        print(f"Failed to retrieve the file. Status code: {response.status_code}")
+        
+    # Save the content to a file   
+    with open(BTC_SENTIMENTDATA_PATH, 'wb') as file:
+        file.write(response.content)
+        
+    print(f"File downloaded and saved as {BTC_SENTIMENTDATA_PATH}")
+
+def merge_sentiment_data(df):
+    """
+    merge_sentiment_data
+    This function will merge the sentiment data with the BTCUSD price data.
+    
+    NOTE: The price data is hourly and the sentiment data is daily, so we will forward fill
+    """
+    print_divider()
+    print("Merging sentiment data with BTCUSD price data...")
+    if not os.path.exists(BTC_SENTIMENTDATA_PATH):
+        print(f"The file '{BTC_SENTIMENTDATA_PATH}' does not exist.")
+        return df
+    
+    # Read the sentiment data
+    sentiment_df = pd.read_csv(BTC_SENTIMENTDATA_PATH, index_col=0)
+    
+    # Convert the date to datetime object
+    sentiment_df.index = pd.to_datetime(sentiment_df.index)
+    
+    # Merge the sentiment data with the BTCUSD price data
+    df = df.merge(sentiment_df, how='left', left_index=True, right_index=True)
+    
+    # Forward fill sentiment data for hourly entries within the same day
+    df[['fng_value', 'fng_classification']] = df[['fng_value', 'fng_classification']].fillna(method='ffill')
+    df = df.dropna(subset=['fng_value', 'fng_classification'])
+    
+    print("Sentiment data merged with BTCUSD price data")
+    return df
+
 def generate_btcusd_closing_price_graph(df):
     """
     generate_btcusd_closing_price_graph
@@ -134,7 +199,11 @@ def main():
     df.set_index('date', inplace=True)
     df.drop(columns=['symbol'], inplace=True)
     df = df.sort_index()
-
+    
+    # Merge sentiment data
+    download_btc_sentiment_data()
+    df = merge_sentiment_data(df)
+    
     # Select target variable
     target = df['close']
 
@@ -192,7 +261,10 @@ def main():
     )    
     df['atr_24'] = df['true_range'].rolling(window=24).mean()
     
-    # Drop 'shifted_close' and rows with missing values due to lagging
+    # Handle fear and greed index
+    df['fng_classification_encoded'] = df['fng_classification'].astype('category').cat.codes
+    
+    # Ensure to drop any rows with missing values due to lagging or encoding
     df = df.dropna()
     
     """
@@ -211,6 +283,8 @@ def main():
         'volatility_ewma_24',
         'parkinson_volatility',
         'atr_24',
+        'fng_value',
+        'fng_classification_encoded'
     ]
 
     X_train = train[exog_columns]

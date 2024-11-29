@@ -21,3 +21,4 @@ pyvenv.cfg
 
 # Ignore btc price data
 BTCUSD_1H.csv
+BTC_sentiment.csv
