@@ -1,41 +1,46 @@
 # Bitcoin price analysis
 
-Analysis in this repo is based on the GitHub [repo](https://github.com/stefan-jansen/machine-learning-for-trading/).
+## Getting started
 
-Data is sourced from Gemini.
+- If using venv
 
-## Plan
+Initialise
 
-- I plan to review the book and see if I can find any alpha for the timeseries data I have sourced.
+```bash
+python3 venv -m ~/.venv
+```
 
-- I will be starting with chapter 9 (time series models).
+Activate
 
-## Response from ChatGPT after asking which chapters would be useful for the data I have sourced
+```bash
+source ~/.venv/bin/activate
+```
 
-Analyzing Bitcoin price data can benefit from several of the listed techniques, depending on the specific objectives of your analysis. Here are a few key recommendations:
+- Run model
 
-- ### Time Series Models (09_time_series_models)
+```bash
+python3 main.py
+```
 
-This is the most direct and suitable option for Bitcoin price data, as it involves forecasting and analyzing temporal patterns. Techniques like ARIMA, SARIMA, or other time-series forecasting models are ideal for understanding trends, seasonality, and volatility in price movements.
+NOTE: the first time downloading the csv data you will need to do some manual formatting. Maybe i'll automate this step one day.
 
-- ### Gradient Boosting Machines (12_gradient_boosting_machines)
+## Research
 
-Algorithms like XGBoost, LightGBM, or CatBoost can be used to analyze historical Bitcoin price data when combined with additional features (e.g., trading volume, macroeconomic indicators, or sentiment analysis). These models are good for regression tasks, predicting future prices, or understanding feature importance.
+[] Gradient boosting machines (XGBoost, LightGBM or CatBoost), these models are good for regression tasks,
+predicting future prices, or understanding feature importance.
 
-- ### Deep Learning (17_deep_learning)
+[] Deep learning (LSTM or GRUs), specialised for sequential data. Great for capturing long-term dependencies
+and complex patterns in price data. Particularly useful with large datasets.
 
-Neural networks like LSTMs or GRUs (specialized for sequential data) are great for capturing long-term dependencies and complex patterns in Bitcoin price data. They are particularly useful if you have large datasets.
+[] Recurrent neural nets (temporal data, RNNs and variations). Designed for handling time series data and sequential dependencies
+effectively.
 
-- ### Recurrent Neural Nets (19_recurrent_neural_nets)
+[] GANS (Generative Adversarial Networks) can be used to simulate and generate synthetic price data for testing
+trading strategies and risk analysis.
 
-Specifically focused on temporal data, RNNs, and their variations like LSTMs and GRUs, are designed to handle time series data and sequential dependencies effectively.
+[] Bayesian machine learning - can help in probabalistic modeling, providing a range of possible outcomes and
+quantifying uncertainty in predictions. Especially good for volatile assets like Bitcoin.
 
-- ### GANs for Synthetic Time Series (21_gans_for_synthetic_time_series)
+## Resources
 
-GANs (Generative Adversarial Networks) can be used to simulate and generate synthetic Bitcoin price data for testing trading strategies or risk analysis.
-
-- ### Bayesian Machine Learning (10_bayesian_machine_learning)
-
-Bayesian approaches can help in probabilistic modeling, providing a range of possible outcomes and quantifying uncertainty in predictions for volatile assets like Bitcoin.
-
-If you're starting, time-series models and gradient boosting machines might be easier to implement and interpret. For more advanced and sophisticated modeling, you could explore deep learning techniques like RNNs or GANs.
+- [machine-learning-for-trading](https://github.com/stefan-jansen/machine-learning-for-trading/).
