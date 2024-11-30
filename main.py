@@ -13,10 +13,7 @@ Steps:
 6. Evaluate and plot
 
 Minor Improvements
-- Work on getting the RMSE and MAE down
-- Aim for 10-20 features.
-- Drop or transform less significant features like `parkinson_volatility`
-- Explore adding more leading indicators (e.g. MACD, Bollinger Bands)
+- Work on getting the values for AIC and BIC down whilst maintaining marginal errors
 - Address heteroskedasticity with GARCH to better model volatility clustering
 - Use LSTM or GRU models for long-sequence time series if computational resources permit
 
