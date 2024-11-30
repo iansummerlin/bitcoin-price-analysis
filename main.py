@@ -195,6 +195,19 @@ def calculate_obv(df):
     df['obv'] = obv
     return df['obv']
 
+def calculate_parkinson_volatility(df):
+    """
+    Calculate the Parkinson volatility for the given DataFrame.
+
+    Parameters:
+    df (DataFrame): The DataFrame containing BTCUSD price data.
+
+    Returns:
+    Series: A Series containing the Parkinson volatility values.
+    """
+    df['parkinson_volatility'] = np.sqrt((1 / (4 * np.log(2))) * (df['high'] - df['low'])**2 / df['close'].shift(1)**2)
+    return df['parkinson_volatility']
+
 def feature_engineering(df):
     """
     Perform feature engineering on the DataFrame.
@@ -205,22 +218,44 @@ def feature_engineering(df):
     Returns:
     DataFrame: The DataFrame with engineered features.
     """
-    # Price
-    lagged_features = [90, 120]
-    df = create_lagged_close_price_features(df, lagged_features)
-    calculate_moving_averages(df)
-    df['rsi'] = calculate_rsi(df)
-
+    # Generate lagged version of `close`
+    for lag in [90, 120]:
+        df[f"close_lag_{lag}"] = df['close'].shift(lag)
+        
+    # Moving averages
+    df['MA_7'] = df['close'].rolling(window=7).mean()
+    df['MA_24'] = df['close'].rolling(window=24).mean()
+    
+    # RSI
+    window_length = 14
+    df['change'] = df['close'].diff()
+    df['gain'] = df['change'].apply(lambda x: x if x > 0 else 0)
+    df['loss'] = df['change'].apply(lambda x: -x if x < 0 else 0)
+    df['avg_gain'] = df['gain'].rolling(window=window_length, min_periods=1).mean()
+    df['avg_loss'] = df['loss'].rolling(window=window_length, min_periods=1).mean()
+    df['rsi'] = 100 - (100 / (1 + (df['avg_gain'] / df['avg_loss'])))
+    
     # Volatility
-    calculate_volatility(df)
-    calculate_average_true_range(df)
-
-    # Volume
-    calculate_obv(df)
+    df['volatility_24'] = df['close'].rolling(window=24).std()
+    df['volatility_ewma_24'] = df['close'].ewm(span=24).std()
+    
+    # Average true range
+    df['shifted_close'] = df['close'].shift(1)
+    df['true_range'] = df[['high', 'low', 'close', 'shifted_close']].apply(
+        lambda row: max(
+            row['high'] - row['low'], 
+            abs(row['high'] - row['shifted_close']), 
+            abs(row['low'] - row['shifted_close'])
+        ), axis=1
+    )    
+    df['atr_24'] = df['true_range'].rolling(window=24).mean()
+    
+    # Calculate Parkinson volatility
+    df['parkinson_volatility'] = calculate_parkinson_volatility(df)
 
     # Drop rows with missing values
     df = df.dropna()
-
+    
     return df
 
 def train_test_split(df):
@@ -318,12 +353,10 @@ def main():
         'rsi',
         'volatility_24', 
         'volatility_ewma_24',
+        'parkinson_volatility',
         'atr_24',
         'fng_value',
-        'obv'
     ]
-
-    df[exog_columns] = StandardScaler().fit_transform(df[exog_columns])
 
     # Train-test split
     train, test = train_test_split(df)
