@@ -25,7 +25,7 @@ best combination of these parameters.
 
 Major Improvements
 - You could combine this model with machine learning models like Random Forests or XGBoost, 
-which might capture non-inear patterns better.
+which might capture non-linear patterns better.
 - Use other advanced models such as GARCH for volatility modeling or LSTM (Long Short-Term Memory) 
 Networks for capturing long-term dependencies in time-series forecasting.
 - For a more sophisticated model I should be using 10-20 features.
@@ -137,27 +137,76 @@ def generate_btcusd_closing_price_graph(df):
     print_divider()
 
 def calculate_rsi(df, window_length=14):
-    """Calculate the Relative Strength Index (RSI)."""
+    """
+    Calculate the Relative Strength Index (RSI).
+
+    Parameters:
+    df (DataFrame): The DataFrame containing BTCUSD price data.
+    window_length (int): The number of periods to use for the RSI calculation.
+
+    Returns:
+    Series: A Series containing the RSI values.
+    """
+    # Calculate the difference in closing prices
     delta = df['close'].diff()
+    
+    # Calculate gains and losses
     gain = (delta.where(delta > 0, 0)).rolling(window=window_length).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=window_length).mean()
+    
+    # Calculate the Relative Strength (RS)
     rs = gain / loss
+    
+    # Calculate the RSI
     df['rsi'] = 100 - (100 / (1 + rs))
     return df['rsi']
 
 def calculate_moving_averages(df):
-    """Calculate moving averages."""
+    """
+    Calculate moving averages for the closing prices.
+
+    Parameters:
+    df (DataFrame): The DataFrame containing BTCUSD price data.
+
+    Returns:
+    None: The function modifies the DataFrame in place.
+    """
+    # Calculate the 7-period moving average
     df['MA_7'] = df['close'].rolling(window=7).mean()
+    
+    # Calculate the 24-period moving average
     df['MA_24'] = df['close'].rolling(window=24).mean()
 
 def calculate_volatility(df):
-    """Calculate volatility measures."""
+    """
+    Calculate volatility measures for the closing prices.
+
+    Parameters:
+    df (DataFrame): The DataFrame containing BTCUSD price data.
+
+    Returns:
+    None: The function modifies the DataFrame in place.
+    """
+    # Calculate the 24-period rolling standard deviation (volatility)
     df['volatility_24'] = df['close'].rolling(window=24).std()
+    
+    # Calculate the exponentially weighted moving average of volatility
     df['volatility_ewma_24'] = df['close'].ewm(span=24).std()
 
 def calculate_average_true_range(df):
-    """Calculate the Average True Range (ATR)."""
+    """
+    Calculate the Average True Range (ATR) for the given DataFrame.
+
+    Parameters:
+    df (DataFrame): The DataFrame containing BTCUSD price data.
+
+    Returns:
+    None: The function modifies the DataFrame in place.
+    """
+    # Shift the closing prices to calculate true range
     df['shifted_close'] = df['close'].shift(1)
+    
+    # Calculate the true range
     df['true_range'] = df[['high', 'low', 'close', 'shifted_close']].apply(
         lambda row: max(
             row['high'] - row['low'], 
@@ -165,35 +214,9 @@ def calculate_average_true_range(df):
             abs(row['low'] - row['shifted_close'])
         ), axis=1
     )    
+    
+    # Calculate the 24-period rolling mean of the true range to get ATR
     df['atr_24'] = df['true_range'].rolling(window=24).mean()
-
-def create_lagged_close_price_features(df, lags):
-    """
-    Create lagged features for the 'close' price.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
-    lags (list): A list of lag periods to create features for.
-
-    Returns:
-    DataFrame: The DataFrame with lagged close price features added.
-    """
-    for lag in lags:
-        df[f"close_lag_{lag}"] = df['close'].shift(lag)
-    return df
-
-def calculate_obv(df):
-    """Calculate On-Balance Volume (OBV)."""
-    obv = np.zeros(len(df))
-    for i in range(1, len(df)):
-        if df['close'].iloc[i] > df['close'].iloc[i - 1]:
-            obv[i] = obv[i - 1] + df['Volume BTC'].iloc[i]
-        elif df['close'].iloc[i] < df['close'].iloc[i - 1]:
-            obv[i] = obv[i - 1] - df['Volume BTC'].iloc[i]
-        else:
-            obv[i] = obv[i - 1]
-    df['obv'] = obv
-    return df['obv']
 
 def calculate_parkinson_volatility(df):
     """
@@ -205,6 +228,7 @@ def calculate_parkinson_volatility(df):
     Returns:
     Series: A Series containing the Parkinson volatility values.
     """
+    # Calculate Parkinson volatility using high and low prices
     df['parkinson_volatility'] = np.sqrt((1 / (4 * np.log(2))) * (df['high'] - df['low'])**2 / df['close'].shift(1)**2)
     return df['parkinson_volatility']
 
@@ -223,35 +247,19 @@ def feature_engineering(df):
         df[f"close_lag_{lag}"] = df['close'].shift(lag)
         
     # Moving averages
-    df['MA_7'] = df['close'].rolling(window=7).mean()
-    df['MA_24'] = df['close'].rolling(window=24).mean()
+    calculate_moving_averages(df)
     
     # RSI
-    window_length = 14
-    df['change'] = df['close'].diff()
-    df['gain'] = df['change'].apply(lambda x: x if x > 0 else 0)
-    df['loss'] = df['change'].apply(lambda x: -x if x < 0 else 0)
-    df['avg_gain'] = df['gain'].rolling(window=window_length, min_periods=1).mean()
-    df['avg_loss'] = df['loss'].rolling(window=window_length, min_periods=1).mean()
-    df['rsi'] = 100 - (100 / (1 + (df['avg_gain'] / df['avg_loss'])))
+    calculate_rsi(df)
     
     # Volatility
-    df['volatility_24'] = df['close'].rolling(window=24).std()
-    df['volatility_ewma_24'] = df['close'].ewm(span=24).std()
+    calculate_volatility(df)
     
     # Average true range
-    df['shifted_close'] = df['close'].shift(1)
-    df['true_range'] = df[['high', 'low', 'close', 'shifted_close']].apply(
-        lambda row: max(
-            row['high'] - row['low'], 
-            abs(row['high'] - row['shifted_close']), 
-            abs(row['low'] - row['shifted_close'])
-        ), axis=1
-    )    
-    df['atr_24'] = df['true_range'].rolling(window=24).mean()
+    calculate_average_true_range(df)
     
     # Calculate Parkinson volatility
-    df['parkinson_volatility'] = calculate_parkinson_volatility(df)
+    calculate_parkinson_volatility(df)
 
     # Drop rows with missing values
     df = df.dropna()
