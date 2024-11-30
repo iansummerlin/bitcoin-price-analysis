@@ -14,9 +14,6 @@ Steps:
 
 Minor Improvements
 - Work on getting the RMSE and MAE down
-- Tune ARIMA order: consider experimenting with different values of p, d and q to see if more 
-apropriate model can be fitted. You can use GridSearch or a similar approach to find the 
-best combination of these parameters.
 - Aim for 10-20 features.
 - Drop or transform less significant features like `parkinson_volatility`
 - Explore adding more leading indicators (e.g. MACD, Bollinger Bands)
@@ -33,16 +30,16 @@ Networks for capturing long-term dependencies in time-series forecasting.
 Misc Improvements
 - Download merged csv so it doesn't need to be generated on each run of the model
 
-Current version: 1.1.0
+Current version: 1.2.0
 Last updated: 29/11/2024 19:54
 Author: Ian Summerlin
 """
 import os
-import requests
 import time 
 import numpy as np
 import pandas as pd
 
+from itertools import product
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
 from sklearn.metrics import mean_squared_error, mean_absolute_error
@@ -161,6 +158,38 @@ def train_test_split(df):
     test = df.iloc[train_size:]
     return train, test
 
+def grid_search_arima(df, p_values, d_values, q_values):
+    """
+    Perform GridSearch for the ARIMA model to find the best (p, d, q) combination.
+    
+    Parameters:
+    df (DataFrame): The DataFrame containing BTCUSD price data.
+    p_values (list): List of potential p values (AR order).
+    d_values (list): List of potential d values (Differencing order).
+    q_values (list): List of potential q values (MA order).
+    
+    Returns:
+    tuple: Best (p, d, q) combination and the corresponding AIC score.
+    """
+    best_aic = np.inf
+    best_order = None
+    
+    # Grid search over the specified parameter combinations
+    for p, d, q in product(p_values, d_values, q_values):
+        try:
+            model = ARIMA(df['close'], order=(p, d, q))
+            model_fit = model.fit()
+            
+            # Use AIC to determine the best model (you can also use BIC or RMSE)
+            if model_fit.aic < best_aic:
+                best_aic = model_fit.aic
+                best_order = (p, d, q)
+        except Exception as e:
+            continue
+    
+    # Return the best order (p, d, q) and the best AIC score
+    return best_order, best_aic
+
 def train_arima_model(train, exog_columns):
     """
     Fit ARIMA model using training data.
@@ -172,12 +201,14 @@ def train_arima_model(train, exog_columns):
     Returns:
     ARIMA: The fitted ARIMA model.
     """
-    p = 5  # AR lag
-    d = 1  # Differencing
-    q = 0  # MA lag
+    p_values = range(0, 6)
+    d_values = range(0, 3)
+    q_values = range(0, 6)
+
+    best_order, best_aic = grid_search_arima(train, p_values, d_values, q_values)
     
     start_time = time.time()  # Start timer
-    model = ARIMA(train['close'], order=(p, d, q), exog=train[exog_columns]) 
+    model = ARIMA(train['close'], order=best_order, exog=train[exog_columns]) 
     arima_model = model.fit()
     end_time = time.time()  # End timer
     
