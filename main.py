@@ -32,22 +32,26 @@ Networks for capturing long-term dependencies in time-series forecasting.
 
 Misc Improvements
 - Download merged csv so it doesn't need to be generated on each run of the model
-- Split out the feature calculations into different functions > create a folder called
-features > include each function as a file inside the folder and import here.
 
-Current version: 1.1.1
+Current version: 1.1.0
 Last updated: 29/11/2024 19:54
 Author: Ian Summerlin
 """
 import os
 import requests
+import time 
 import numpy as np
 import pandas as pd
+
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-import time  # Add this import at the top
+
+from utils import print_divider, download_file
+from features.averages import calculate_moving_averages, calculate_average_true_range
+from features.price import calculate_lagged_close
+from features.technical import calculate_rsi
+from features.volatility import calculate_rolling_volatility, calculate_ewma_volatility, calculate_parkinson_volatility
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -59,33 +63,6 @@ BTC_SENTIMENTDATA_URL = "https://api.alternative.me/fng/?limit=250000&format=csv
 BTC_SENTIMENTDATA_PATH = "BTC_sentiment.csv"
 BTC_CLOSING_PRICE_CHART_PATH = "bitcoin-closing-price.png"
 BTC_ACTUAL_VS_PREDICTED_CHART_PATH = "bitcoin-actual-vs-predicted-price.png"
-
-def print_divider():
-    """Print a divider to improve organisation of print statements."""
-    print("------------------------")
-
-def download_file(url, path):
-    """
-    Download a file from a URL if it doesn't already exist.
-
-    Parameters:
-    url (str): The URL to download the file from.
-    path (str): The local path where the file will be saved.
-    """
-    print_divider()
-    print(f"Downloading file from {url}...")
-    if os.path.exists(path):
-        print(f"The file '{path}' already exists.")
-        return
-    
-    response = requests.get(url)
-    if response.status_code != 200:
-        print(f"Failed to retrieve the file. Status code: {response.status_code}")
-        return
-    
-    with open(path, 'wb') as file:
-        file.write(response.content)
-    print(f"File downloaded and saved as {path}")
 
 def download_data():
     """Download both BTC price and sentiment data."""
@@ -136,102 +113,6 @@ def generate_btcusd_closing_price_graph(df):
     print(f"Bitcoin Closing Price graph generated and saved as {BTC_CLOSING_PRICE_CHART_PATH}")
     print_divider()
 
-def calculate_rsi(df, window_length=14):
-    """
-    Calculate the Relative Strength Index (RSI).
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
-    window_length (int): The number of periods to use for the RSI calculation.
-
-    Returns:
-    Series: A Series containing the RSI values.
-    """
-    # Calculate the difference in closing prices
-    delta = df['close'].diff()
-    
-    # Calculate gains and losses
-    gain = (delta.where(delta > 0, 0)).rolling(window=window_length).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=window_length).mean()
-    
-    # Calculate the Relative Strength (RS)
-    rs = gain / loss
-    
-    # Calculate the RSI
-    df['rsi'] = 100 - (100 / (1 + rs))
-    return df['rsi']
-
-def calculate_moving_averages(df):
-    """
-    Calculate moving averages for the closing prices.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
-
-    Returns:
-    None: The function modifies the DataFrame in place.
-    """
-    # Calculate the 7-period moving average
-    df['MA_7'] = df['close'].rolling(window=7).mean()
-    
-    # Calculate the 24-period moving average
-    df['MA_24'] = df['close'].rolling(window=24).mean()
-
-def calculate_volatility(df):
-    """
-    Calculate volatility measures for the closing prices.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
-
-    Returns:
-    None: The function modifies the DataFrame in place.
-    """
-    # Calculate the 24-period rolling standard deviation (volatility)
-    df['volatility_24'] = df['close'].rolling(window=24).std()
-    
-    # Calculate the exponentially weighted moving average of volatility
-    df['volatility_ewma_24'] = df['close'].ewm(span=24).std()
-
-def calculate_average_true_range(df):
-    """
-    Calculate the Average True Range (ATR) for the given DataFrame.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
-
-    Returns:
-    None: The function modifies the DataFrame in place.
-    """
-    # Shift the closing prices to calculate true range
-    df['shifted_close'] = df['close'].shift(1)
-    
-    # Calculate the true range
-    df['true_range'] = df[['high', 'low', 'close', 'shifted_close']].apply(
-        lambda row: max(
-            row['high'] - row['low'], 
-            abs(row['high'] - row['shifted_close']), 
-            abs(row['low'] - row['shifted_close'])
-        ), axis=1
-    )    
-    
-    # Calculate the 24-period rolling mean of the true range to get ATR
-    df['atr_24'] = df['true_range'].rolling(window=24).mean()
-
-def calculate_parkinson_volatility(df):
-    """
-    Calculate the Parkinson volatility for the given DataFrame.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
-
-    Returns:
-    Series: A Series containing the Parkinson volatility values.
-    """
-    # Calculate Parkinson volatility using high and low prices
-    df['parkinson_volatility'] = np.sqrt((1 / (4 * np.log(2))) * (df['high'] - df['low'])**2 / df['close'].shift(1)**2)
-    return df['parkinson_volatility']
-
 def feature_engineering(df):
     """
     Perform feature engineering on the DataFrame.
@@ -242,23 +123,22 @@ def feature_engineering(df):
     Returns:
     DataFrame: The DataFrame with engineered features.
     """
-    # Generate lagged version of `close`
+
+    # Price
     for lag in [90, 120]:
-        df[f"close_lag_{lag}"] = df['close'].shift(lag)
+        calculate_lagged_close(df, lag)
         
-    # Moving averages
-    calculate_moving_averages(df)
+    # Averages
+    for ma in [7, 24]:
+        calculate_moving_averages(df, ma)
+    calculate_average_true_range(df)
     
-    # RSI
+    # Technical
     calculate_rsi(df)
     
     # Volatility
-    calculate_volatility(df)
-    
-    # Average true range
-    calculate_average_true_range(df)
-    
-    # Calculate Parkinson volatility
+    calculate_rolling_volatility(df)
+    calculate_ewma_volatility(df)
     calculate_parkinson_volatility(df)
 
     # Drop rows with missing values
@@ -301,7 +181,7 @@ def train_arima_model(train, exog_columns):
     arima_model = model.fit()
     end_time = time.time()  # End timer
     
-    print(f"Model training time: {end_time - start_time:.2f} seconds")  # Print training time
+    print(f"Model training time: {end_time - start_time:.2f} seconds")
     print(arima_model.summary())
     return arima_model
 
