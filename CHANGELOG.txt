@@ -50,7 +50,7 @@ MAE: 218.56113259231762
 
 ## Changelog entries
 
-- 30/11/2024 14:41 - 👍 used the grid search method for fine tuning the arima model parameters.
+- 30/11/2024 14:41 - 👍👍👍 used the grid search method for fine tuning the arima model parameters.
 This SIGNIFICANTLY improved the size of the errors.
 
                                SARIMAX Results                                

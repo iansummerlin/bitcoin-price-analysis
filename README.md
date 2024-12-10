@@ -16,6 +16,12 @@ Activate
 source ~/.venv/bin/activate
 ```
 
+- Generate model
+
+```bash
+python3 gen.py
+```
+
 - Run model
 
 ```bash

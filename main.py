@@ -1,288 +1,310 @@
 """
-Time series forecasting for BTC/USD. 
-
-Sourced 1h timeseries df from Gemini.
-Sourced daily fear and greed index from alternative.me.
-
-Steps:
-1. Download and prepare data
-2. Select target variable (close)
-3. Feature engineering (lagged close, moving averages, rsi, volatility, volume, fear and greed index)
-4. Train-test split
-5. Model training
-6. Evaluate and plot
-
-Minor Improvements
-- Work on getting the values for AIC and BIC down whilst maintaining marginal errors
-- Address heteroskedasticity with GARCH to better model volatility clustering
-- Use LSTM or GRU models for long-sequence time series if computational resources permit
-
-Major Improvements
-- You could combine this model with machine learning models like Random Forests or XGBoost, 
-which might capture non-linear patterns better.
-- Use other advanced models such as GARCH for volatility modeling or LSTM (Long Short-Term Memory) 
-Networks for capturing long-term dependencies in time-series forecasting.
-- For a more sophisticated model I should be using 10-20 features.
-
-Misc Improvements
-- Download merged csv so it doesn't need to be generated on each run of the model
-
-Current version: 1.2.0
-Last updated: 29/11/2024 19:54
-Author: Ian Summerlin
+Trading bot
 """
+
 import os
-import time 
-import numpy as np
+import requests
+import websocket
+import json
+import joblib
 import pandas as pd
+import time
+import rel
+from datetime import datetime
 
-from itertools import product
-import matplotlib.pyplot as plt
-from statsmodels.tsa.arima.model import ARIMA
-from sklearn.metrics import mean_squared_error, mean_absolute_error
-
-from utils import print_divider, download_file
 from features.averages import calculate_moving_averages, calculate_average_true_range
 from features.price import calculate_lagged_close
 from features.technical import calculate_rsi
 from features.volatility import calculate_rolling_volatility, calculate_ewma_volatility, calculate_parkinson_volatility
 
-import warnings
-warnings.filterwarnings("ignore")
+MODEL_PATH = "./arima-btc-closing-price.pkl"
+BTC_SENTIMENTDATA_URL = "https://api.alternative.me/fng/?limit=1&date_format=kr"
+BTCUSD_STREAM_URL = "wss://fstream.binance.com/ws/btcusdt"
 
-# Constants
-BTC_PRICEDATA_1H_URL = "https://www.cryptodatadownload.com/cdd/Gemini_BTCUSD_1h.csv"
-BTC_PRICEDATA_PATH = "BTCUSD_1H.csv"
-BTC_SENTIMENTDATA_URL = "https://api.alternative.me/fng/?limit=250000&format=csv&date_format=kr"
-BTC_SENTIMENTDATA_PATH = "BTC_sentiment.csv"
-BTC_CLOSING_PRICE_CHART_PATH = "bitcoin-closing-price.png"
-BTC_ACTUAL_VS_PREDICTED_CHART_PATH = "bitcoin-actual-vs-predicted-price.png"
-
-def download_data():
-    """Download both BTC price and sentiment data."""
-    download_file(BTC_PRICEDATA_1H_URL, BTC_PRICEDATA_PATH)
-    download_file(BTC_SENTIMENTDATA_URL, BTC_SENTIMENTDATA_PATH)
-
-def merge_sentiment_data(df):
+def load_model():
     """
-    Merge sentiment data with BTCUSD price data.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
+    Load the generated model from `gen.py` script
 
     Returns:
-    DataFrame: The merged DataFrame with sentiment data.
+    Model: The generated model from `gen.py`
     """
-    print_divider()
-    print("Merging sentiment data with BTCUSD price data...")
-    if not os.path.exists(BTC_SENTIMENTDATA_PATH):
-        print(f"The file '{BTC_SENTIMENTDATA_PATH}' does not exist.")
-        return df
-    
-    sentiment_df = pd.read_csv(BTC_SENTIMENTDATA_PATH, index_col=0)
-    sentiment_df.index = pd.to_datetime(sentiment_df.index)
-    df = df.merge(sentiment_df, how='left', left_index=True, right_index=True)
-    df[['fng_value', 'fng_classification']] = df[['fng_value', 'fng_classification']].fillna(method='ffill')
-    df = df.dropna(subset=['fng_value', 'fng_classification'])
-    df = df.ffill() # Fill the daily sentiment data across the hourly price data
-    print("Sentiment data merged with BTCUSD price data")
-    return df
-
-def generate_btcusd_closing_price_graph(df):
-    """
-    Generate the BTCUSD closing price graph.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
-    """
-    print_divider()
-    print("Generating Bitcoin Closing Price graph...")
-    if os.path.exists(BTC_CLOSING_PRICE_CHART_PATH):
-        print(f"The file '{BTC_CLOSING_PRICE_CHART_PATH}' already exists.")
+    if not os.path.exists(MODEL_PATH):
+        print(f"The file '{MODEL_PATH}' does not exist")
         return
-    
-    plt.figure(figsize=(10, 6))
-    df['close'].plot(title='Bitcoin Closing Price')
-    plt.savefig(BTC_CLOSING_PRICE_CHART_PATH)
-    print(f"Bitcoin Closing Price graph generated and saved as {BTC_CLOSING_PRICE_CHART_PATH}")
-    print_divider()
+    return joblib.load(MODEL_PATH)
 
-def feature_engineering(df):
+def get_daily_sentiment_data():
     """
-    Perform feature engineering on the DataFrame.
-
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
+    Get daily sentiment data
 
     Returns:
-    DataFrame: The DataFrame with engineered features.
+    Tuple: value, current_timestamp and update_timestamp
     """
+    response = requests.get(BTC_SENTIMENTDATA_URL)
+    if response.status_code != 200:
+        print(f"Failed to retrieve sentiment data. Status code: {response.status_code}")
+        return None, None, None
+    
+    data = response.json()
+    value = data['data'][0]['value']
+    
+    # Use time library for timestamps
+    current_timestamp = time.time()  # Current time in seconds since the epoch
+    time_until_update = int(data['data'][0]['time_until_update'])
+    update_timestamp = current_timestamp + time_until_update  # Update timestamp in seconds
 
-    # Price
-    for lag in [90, 120]:
-        calculate_lagged_close(df, lag)
+    # Convert timestamps to datetime objects
+    current_datetime = datetime.fromtimestamp(current_timestamp)
+    update_datetime = datetime.fromtimestamp(update_timestamp)
+
+    return value, current_datetime, update_datetime
+
+def handle_is_new_hour(timestamp_ms):
+    """
+    Determines if the given timestamp (in milliseconds) is at the start of a new hour.
+    
+    Args:
+    timestamp_ms (int): Timestamp in milliseconds.
         
-    # Averages
-    for ma in [7, 24]:
-        calculate_moving_averages(df, ma)
-    calculate_average_true_range(df)
+    Returns:
+    bool: True if the timestamp is at the start of a new hour, False otherwise.
+    """
+    # Convert milliseconds to seconds and then to a datetime object
+    dt = datetime.fromtimestamp(timestamp_ms / 1000)
     
-    # Technical
-    calculate_rsi(df)
-    
-    # Volatility
-    calculate_rolling_volatility(df)
-    calculate_ewma_volatility(df)
-    calculate_parkinson_volatility(df)
+    # Check if it's the start of a new hour (minute and second are 0)
+    return dt.minute == 0 and dt.second == 0
 
-    # Drop rows with missing values
-    df = df.dropna()
-    
+def handle_is_enough_data(df, minimum_rows=120):
+    """
+    Is there enough data to calculate the lagging features?
+
+    Args:
+    df (DataFrame): The DataFrame
+
+    Returns:
+    bool: True if enough data, false if not
+    """
+    return len(df) >= minimum_rows
+
+def prepare_exog_data(model, df, stream_data):
+    """
+    Prepare exogenous variables for the next time step
+
+    Args:
+    model (ARIMA): The ARIMA BTCUSD closing price prediction model
+    df (DataFrame): The DataFrame loaded from the CSV file
+    stream_data (StreamData): Binance stream data
+
+    Returns:
+    DataFrame: The updated DataFrame with new data.
+    """
+    fng_value, _, _ = get_daily_sentiment_data()  # TODO: only fetch when required
+    new_row = pd.DataFrame({
+        'date': [datetime.fromtimestamp(int(stream_data['E'])/1000)],
+        'open': [stream_data['o']],
+        'high': [stream_data['h']],
+        'low': [stream_data['l']],
+        'close': [stream_data['c']],
+        'Volume BTC': [stream_data['v']],
+        'Volume USD': [stream_data['q']],
+        'fng_value': [fng_value],
+    })
+
+    df = pd.concat([df, new_row], ignore_index=True)
+
+    # Is there enough data to calculate features?
+    is_enough_data = handle_is_enough_data(df)
+    if is_enough_data:
+        print("Calculating features...")
+        # Price
+        for lag in [90, 120]:
+            calculate_lagged_close(df, lag)
+            
+        # Averages
+        for ma in [7, 24]:
+            calculate_moving_averages(df, ma)
+        calculate_average_true_range(df)
+        
+        # Technical
+        calculate_rsi(df)
+        
+        # Volatility
+        calculate_rolling_volatility(df)
+        calculate_ewma_volatility(df)
+        calculate_parkinson_volatility(df)
+
+        # Prepare the last row for prediction
+        df_last_row = df.iloc[[-1]].copy()  # Create a copy of the last row
+        
+        # Select only the columns that were used for training the model
+        required_columns = ['close_lag_90', 'close_lag_120', 'MA_7', 'MA_24', 'rsi', 
+                            'volatility_24', 'volatility_ewma_24', 'parkinson_volatility', 
+                            'atr_24', 'fng_value']  # Example of required columns
+        
+        # Remove columns with NaNs for prediction only
+        df_for_prediction = df_last_row[required_columns].dropna(axis=1) 
+         # Ensure all columns are numeric
+        df_for_prediction = df_for_prediction.apply(pd.to_numeric, errors='coerce')
+
+        predicted_price = predict_next_price(model, df_for_prediction)
+        df.loc[df.index[-1], 'predicted_closing_price'] = predicted_price
     return df
 
-def train_test_split(df):
+def predict_next_price(model, exog_data):
     """
-    Split the DataFrame into training and testing sets.
+    Use the ARIMA model to predict the next closing price.
 
     Parameters:
-    df (DataFrame): The DataFrame to split.
+    model (ARIMA): The fitted ARIMA model.
+    exog_data (DataFrame): The exogenous variables for the prediction.
 
     Returns:
-    tuple: A tuple containing the training DataFrame and the testing DataFrame.
+    float: The predicted next closing price.
     """
-    train_size = int(len(df) * 0.8)
-    train = df.iloc[:train_size]
-    test = df.iloc[train_size:]
-    return train, test
+    # Forecast the next time step
+    forecast = model.get_forecast(steps=1, exog=exog_data)
+    print(forecast)
+    
+    # Extract the predicted mean (point forecast)
+    predicted_price = forecast.predicted_mean.iloc[0]
+    return predicted_price
 
-def grid_search_arima(df, p_values, d_values, q_values):
+def on_message_with_model(model, filename, df):
     """
-    Perform GridSearch for the ARIMA model to find the best (p, d, q) combination.
-    
-    Parameters:
-    df (DataFrame): The DataFrame containing BTCUSD price data.
-    p_values (list): List of potential p values (AR order).
-    d_values (list): List of potential d values (Differencing order).
-    q_values (list): List of potential q values (MA order).
-    
-    Returns:
-    tuple: Best (p, d, q) combination and the corresponding AIC score.
-    """
-    best_aic = np.inf
-    best_order = None
-    
-    # Grid search over the specified parameter combinations
-    for p, d, q in product(p_values, d_values, q_values):
-        try:
-            model = ARIMA(df['close'], order=(p, d, q))
-            model_fit = model.fit()
-            
-            # Use AIC to determine the best model (you can also use BIC or RMSE)
-            if model_fit.aic < best_aic:
-                best_aic = model_fit.aic
-                best_order = (p, d, q)
-        except Exception as e:
-            continue
-    
-    # Return the best order (p, d, q) and the best AIC score
-    return best_order, best_aic
+    Creates a WebSocket `on_message` callback to handle incoming messages, 
+    process them with a given model, and log results to a CSV file.
 
-def train_arima_model(train, exog_columns):
-    """
-    Fit ARIMA model using training data.
+    Example stream data
+    stream_data = {
+        "e": "24hrTicker",  # Event type
+        "E": 123456789,     # Event time
+        "s": "BTCUSDT",     # Symbol
+        "p": "0.0015",      # Price change
+        "P": "250.00",      # Price change percent
+        "w": "0.0018",      # Weighted average price
+        "c": "0.0025",      # Last price (Close price)
+        "Q": "10",          # Last quantity
+        "o": "0.0010",      # Open price
+        "h": "0.0025",      # High price
+        "l": "0.0010",      # Low price
+        "v": "10000",       # Total traded base asset volume
+        "q": "18",          # Total traded quote asset volume
+        "O": 0,             # Statistics open time
+        "C": 86400000,      # Statistics close time
+        "F": 0,             # First trade ID
+        "L": 18150,         # Last trade ID
+        "n": 18151          # Total number of trades
+    }
 
-    Parameters:
-    train (DataFrame): The training DataFrame containing BTCUSD price data.
-    exog_columns (list): List of exogenous variable column names to include in the model.
+    Args:
+    model (ARIMA): The predictive model used to analyze the data.
+    filename (str): The path to the CSV file where processed data will be appended.
+    df (DataFrame): The initial DataFrame used for data processing.
 
     Returns:
-    ARIMA: The fitted ARIMA model.
+    function: A callback function to handle WebSocket messages.
     """
-    p_values = range(0, 6)
-    d_values = range(0, 3)
-    q_values = range(0, 6)
+    last_processed_hour = None  # Store the last processed hour
 
-    best_order, best_aic = grid_search_arima(train, p_values, d_values, q_values)
+    def on_message(ws, message):
+        nonlocal last_processed_hour  # Allow access to the outer variable
+        data = json.loads(message)
+        current_timestamp = int(data['E'])  # Current message timestamp in milliseconds
+        # Convert current timestamp to datetime object
+        current_hour = datetime.fromtimestamp(current_timestamp / 1000).replace(minute=0, second=0, microsecond=0)
+
+        # Check if the current hour is different from the last processed hour
+        if last_processed_hour is not None and current_hour <= last_processed_hour:
+            return  # Skip processing if the current hour has not changed
+        
+        print("Preparing data for insert...")
+
+        # Update the last processed hour to the current hour
+        last_processed_hour = current_hour
+
+        # Prepare exogenous data and get the updated DataFrame
+        ndf = prepare_exog_data(model, df, data)
+        
+        # Overwrite the CSV with the updated DataFrame
+        ndf.to_csv(filename, index=False) 
+        print(f"Data appended to {filename}")
+    return on_message
+
+
+def on_error_with_timestamp(filename):
+    """
+    Creates an `on_error` function that logs errors with timestamps to a .txt file.
     
-    start_time = time.time()  # Start timer
-    model = ARIMA(train['close'], order=best_order, exog=train[exog_columns]) 
-    arima_model = model.fit()
-    end_time = time.time()  # End timer
-    
-    print(f"Model training time: {end_time - start_time:.2f} seconds")
-    print(arima_model.summary())
-    return arima_model
-
-def evaluate_model(arima_model, test, exog_columns):
+    Args:
+    filename (str): The filename (without extension) for the log file.
+        
+    Returns:
+    function: A callback function to handle errors.
     """
-    Evaluate the ARIMA model and plot predictions vs actual values.
+    def on_error(ws, error):
+        # Get current timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Format the error message
+        log_message = f"{timestamp}: {error}\n"
+        
+        # Append the log message to the .txt file
+        with open(f"{filename}.txt", "a") as log_file:
+            log_file.write(log_message)
+        
+        print(f"Error logged: {log_message.strip()}")
+        
+    return on_error
 
-    Parameters:
-    arima_model (ARIMA): The fitted ARIMA model.
-    test (DataFrame): The testing DataFrame containing BTCUSD price data.
-    exog_columns (list): List of exogenous variable column names used for forecasting.
-    """
-    forecast = arima_model.forecast(steps=len(test), exog=test[exog_columns])
-    rmse = np.sqrt(mean_squared_error(test['close'], forecast))
-    mae = mean_absolute_error(test['close'], forecast)
-    print('RMSE:', rmse)
-    print('MAE:', mae)
-    print_divider()
+def on_close(ws, close_status_code, close_msg):
+    print(f"WebSocket connection closed: {close_status_code} - {close_msg}")
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(test.index, test['close'], label='Actual Prices', color='blue')
-    plt.plot(test.index, forecast, label='Forecasted Prices', color='orange')
-    plt.title('Bitcoin Price Prediction using ARIMA')
-    plt.xlabel('Date')
-    plt.ylabel('Closing Price')
-    plt.legend()
-    plt.savefig(BTC_ACTUAL_VS_PREDICTED_CHART_PATH)
-    print(f"Chart saved as {BTC_ACTUAL_VS_PREDICTED_CHART_PATH}")
+def on_open(ws):
+    print("WebSocket connection opened")
+    subscribe_message = {
+        "method": "SUBSCRIBE",
+        "params": ["btcusdt@ticker"],
+        "id": 1
+    }
+    ws.send(json.dumps(subscribe_message))
+
+def on_ping(ws, message):
+    ws.send(message, websocket.ABNF.OPCODE_PONG)
 
 def main():
-    """Main function to handle all steps for BTCUSD price analysis."""
-    print("Preparing model...")
-    
-    # Download and import df
-    download_data()
-    df = pd.read_csv(BTC_PRICEDATA_PATH, index_col=0)
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
-    df.drop(columns=['symbol'], inplace=True)
-    df = df.sort_index()
-    
-    # Merge sentiment data
-    df = merge_sentiment_data(df)
-    
-    # Generate closing price graph
-    generate_btcusd_closing_price_graph(df)
+    model = load_model()
+    filename = "BTCUSD_trading.csv"  
+    error_log_filename = "BTCUSD_trading_errors.txt"
 
-    # Feature engineering
-    df = feature_engineering(df)
+    # Initialize the CSV with headers only if the file does not exist
+    if not os.path.exists(filename):
+        with open(filename, 'w') as f:
+            f.write("date,open,high,low,close,Volume BTC,Volume USD,close_lag_90,close_lag_120,MA_7,MA_24,rsi,volatility_24,volatility_ewma_24,parkinson_volatility,atr_24,fng_value,predicted_closing_price\n")
 
-    # Define exogenous variables
-    exog_columns = [
-        'close_lag_90', 
-        'close_lag_120', 
-        'MA_7', 
-        'MA_24', 
-        'rsi',
-        'volatility_24', 
-        'volatility_ewma_24',
-        'parkinson_volatility',
-        'atr_24',
-        'fng_value',
-    ]
+    # Initialize the error log with headers only if the file does not exist
+    if not os.path.exists(error_log_filename):
+        with open(error_log_filename, 'w') as f:
+            f.write("Timestamp: Error Message\n")  # Optional header for clarity
 
-    # Train-test split
-    train, test = train_test_split(df)
+    # Load existing data from the CSV file into the DataFrame if it exists
+    if os.path.exists(filename):
+        df = pd.read_csv(filename)  # Load existing data
+    else:
+        df = pd.DataFrame(columns=["date", "open", "high", "low", "close", "Volume BTC", "Volume USD", 
+                                   "close_lag_90", "close_lag_120", "MA_7", "MA_24", "rsi", 
+                                   "volatility_24", "volatility_ewma_24", "parkinson_volatility", 
+                                   "atr_24", "fng_value", "predicted_closing_price"])
 
-    # Train ARIMA model
-    arima_model = train_arima_model(train, exog_columns)
+    ws = websocket.WebSocketApp(BTCUSD_STREAM_URL,
+                            on_message=on_message_with_model(model, filename, df),
+                            on_error=on_error_with_timestamp(error_log_filename),  # Use the error log filename
+                            on_close=on_close,
+                            on_open=on_open,
+                            on_ping=on_ping)
+    ws.run_forever(dispatcher=rel, reconnect=5)
+    rel.signal(2, rel.abort)
+    rel.dispatch()
 
-    # Evaluate model
-    evaluate_model(arima_model, test, exog_columns)
-
-# Execute script
 if __name__ == "__main__":
-    main()
+    main()  
