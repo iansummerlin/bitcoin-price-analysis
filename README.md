@@ -57,7 +57,7 @@ This script connects to the Binance WebSocket stream to collect real-time BTCUSD
 
 To stop the `collect.py` process if it was run with `nohup`:
 
-1.  **Stopping the collect process:**
+**Stopping the collect process:**
 
 ```bash
 pgrep -f "python3 collect.py" | xargs kill
