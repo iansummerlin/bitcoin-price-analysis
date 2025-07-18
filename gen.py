@@ -62,8 +62,12 @@ ARIMA_CLOSING_PRICE_MODEL = "arima-btc-closing-price.pkl"
 
 def download_data():
     """Download both BTC price and sentiment data."""
+    print("Step 1/8: Downloading data...")
+    print("  - Downloading BTC price data...")
     download_file(BTC_PRICEDATA_1H_URL, BTC_PRICEDATA_PATH)
+    print("  - Downloading sentiment data...")
     download_file(BTC_SENTIMENTDATA_URL, BTC_SENTIMENTDATA_PATH)
+    print("✓ Data download complete")
 
 def merge_sentiment_data(df):
     """
@@ -75,6 +79,7 @@ def merge_sentiment_data(df):
     Returns:
     DataFrame: The merged DataFrame with sentiment data.
     """
+    print("Step 2/8: Merging sentiment data...")
     print_divider()
     print("Merging sentiment data with BTCUSD price data...")
     if not os.path.exists(BTC_SENTIMENTDATA_PATH):
@@ -87,7 +92,7 @@ def merge_sentiment_data(df):
     df[['fng_value', 'fng_classification']] = df[['fng_value', 'fng_classification']].fillna(method='ffill')
     df = df.dropna(subset=['fng_value', 'fng_classification'])
     df = df.ffill() # Fill the daily sentiment data across the hourly price data
-    print("Sentiment data merged with BTCUSD price data")
+    print("✓ Sentiment data merged with BTCUSD price data")
     return df
 
 def generate_btcusd_closing_price_graph(df):
@@ -97,6 +102,7 @@ def generate_btcusd_closing_price_graph(df):
     Parameters:
     df (DataFrame): The DataFrame containing BTCUSD price data.
     """
+    print("Step 3/8: Generating closing price graph...")
     print_divider()
     print("Generating Bitcoin Closing Price graph...")
     if os.path.exists(BTC_CLOSING_PRICE_CHART_PATH):
@@ -106,7 +112,7 @@ def generate_btcusd_closing_price_graph(df):
     plt.figure(figsize=(10, 6))
     df['close'].plot(title='Bitcoin Closing Price')
     plt.savefig(BTC_CLOSING_PRICE_CHART_PATH)
-    print(f"Bitcoin Closing Price graph generated and saved as {BTC_CLOSING_PRICE_CHART_PATH}")
+    print(f"✓ Bitcoin Closing Price graph generated and saved as {BTC_CLOSING_PRICE_CHART_PATH}")
     print_divider()
 
 def feature_engineering(df):
@@ -119,27 +125,34 @@ def feature_engineering(df):
     Returns:
     DataFrame: The DataFrame with engineered features.
     """
+    print("Step 4/8: Performing feature engineering...")
+    print("  - Calculating lagged close prices...")
 
     # Price
     for lag in [90, 120]:
         calculate_lagged_close(df, lag)
         
+    print("  - Calculating moving averages...")
     # Averages
     for ma in [7, 24]:
         calculate_moving_averages(df, ma)
     calculate_average_true_range(df)
     
+    print("  - Calculating technical indicators...")
     # Technical
     calculate_rsi(df)
     
+    print("  - Calculating volatility measures...")
     # Volatility
     calculate_rolling_volatility(df)
     calculate_ewma_volatility(df)
     calculate_parkinson_volatility(df)
 
+    print("  - Cleaning data (removing NaN values)...")
     # Drop rows with missing values
     df = df.dropna()
     
+    print("✓ Feature engineering complete")
     return df
 
 def train_test_split(df):
@@ -152,9 +165,11 @@ def train_test_split(df):
     Returns:
     tuple: A tuple containing the training DataFrame and the testing DataFrame.
     """
+    print("Step 5/8: Splitting data into train/test sets...")
     train_size = int(len(df) * 0.8)
     train = df.iloc[:train_size]
     test = df.iloc[train_size:]
+    print(f"✓ Data split complete - Training: {len(train)} rows, Testing: {len(test)} rows")
     return train, test
 
 def grid_search_arima(df, p_values, d_values, q_values):
@@ -170,11 +185,18 @@ def grid_search_arima(df, p_values, d_values, q_values):
     Returns:
     tuple: Best (p, d, q) combination and the corresponding AIC score.
     """
+    print("  - Performing grid search for optimal ARIMA parameters...")
     best_aic = np.inf
     best_order = None
+    total_combinations = len(p_values) * len(d_values) * len(q_values)
+    current_combination = 0
     
     # Grid search over the specified parameter combinations
     for p, d, q in product(p_values, d_values, q_values):
+        current_combination += 1
+        if current_combination % 10 == 0:  # Print progress every 10 combinations
+            print(f"    Testing combination {current_combination}/{total_combinations}: ({p},{d},{q})")
+        
         try:
             model = ARIMA(df['close'], order=(p, d, q))
             model_fit = model.fit()
@@ -186,6 +208,7 @@ def grid_search_arima(df, p_values, d_values, q_values):
         except Exception as e:
             continue
     
+    print(f"  ✓ Grid search complete - Best order: {best_order}, AIC: {best_aic:.2f}")
     # Return the best order (p, d, q) and the best AIC score
     return best_order, best_aic
 
@@ -200,17 +223,19 @@ def train_arima_model(train, exog_columns):
     Returns:
     ARIMA: The fitted ARIMA model.
     """
+    print("Step 6/8: Training ARIMA model...")
     p_values = range(0, 6)
     d_values = range(0, 3)
     q_values = range(0, 6)
 
     start_time = time.time()  # Start timer
     best_order, best_aic = grid_search_arima(train, p_values, d_values, q_values)
+    print("  - Fitting final ARIMA model with best parameters...")
     model = ARIMA(train['close'], order=best_order, exog=train[exog_columns]) 
     arima_model = model.fit()
     end_time = time.time()  # End timer
     
-    print(f"Model training time: {end_time - start_time:.2f} seconds")
+    print(f"✓ Model training complete - Time: {end_time - start_time:.2f} seconds")
     print(arima_model.summary())
     return arima_model
 
@@ -223,13 +248,17 @@ def evaluate_model(arima_model, test, exog_columns):
     test (DataFrame): The testing DataFrame containing BTCUSD price data.
     exog_columns (list): List of exogenous variable column names used for forecasting.
     """
+    print("Step 7/8: Evaluating model performance...")
+    print("  - Generating forecasts...")
     forecast = arima_model.forecast(steps=len(test), exog=test[exog_columns])
     rmse = np.sqrt(mean_squared_error(test['close'], forecast))
     mae = mean_absolute_error(test['close'], forecast)
-    print('RMSE:', rmse)
-    print('MAE:', mae)
+    print('  ✓ Model evaluation complete:')
+    print('    RMSE:', rmse)
+    print('    MAE:', mae)
     print_divider()
 
+    print("  - Generating prediction vs actual chart...")
     plt.figure(figsize=(10, 6))
     plt.plot(test.index, test['close'], label='Actual Prices', color='blue')
     plt.plot(test.index, forecast, label='Forecasted Prices', color='orange')
@@ -238,19 +267,22 @@ def evaluate_model(arima_model, test, exog_columns):
     plt.ylabel('Closing Price')
     plt.legend()
     plt.savefig(BTC_ACTUAL_VS_PREDICTED_CHART_PATH)
-    print(f"Chart saved as {BTC_ACTUAL_VS_PREDICTED_CHART_PATH}")
+    print(f"✓ Chart saved as {BTC_ACTUAL_VS_PREDICTED_CHART_PATH}")
 
 def main():
     """Main function to handle all steps for BTCUSD price analysis."""
+    print("=== Bitcoin Price Analysis Model Generation ===")
     print("Preparing model...")
     
     # Download and import df
     download_data()
+    print("  - Loading price data...")
     df = pd.read_csv(BTC_PRICEDATA_PATH, index_col=0)
     df['date'] = pd.to_datetime(df['date'])
     df.set_index('date', inplace=True)
     df.drop(columns=['symbol'], inplace=True)
     df = df.sort_index()
+    print("✓ Price data loaded and processed")
     
     # Merge sentiment data
     df = merge_sentiment_data(df)
@@ -285,7 +317,10 @@ def main():
     evaluate_model(arima_model, test, exog_columns)
 
     # Download model
+    print("Step 8/8: Saving trained model...")
     joblib.dump(arima_model, ARIMA_CLOSING_PRICE_MODEL)
+    print(f"✓ Model saved as {ARIMA_CLOSING_PRICE_MODEL}")
+    print("\n=== Model Generation Complete ===")
 
 # Execute script
 if __name__ == "__main__":

@@ -37,5 +37,4 @@ def calculate_parkinson_volatility(df):
     Series: A Series containing the Parkinson volatility values.
     """
     # Calculate Parkinson volatility using high and low prices
-    df['parkinson_volatility'] = np.sqrt((1 / (4 * np.log(2))) * (df['high'] - df['low'])**2 / df['close'].shift(1)**2)
-    return df['parkinson_volatility']
+    df['parkinson_volatility'] = (np.sqrt((1 / (4 * np.log(2))) * (df['high'] - df['low'])**2 / df['close'].shift(1)**2))

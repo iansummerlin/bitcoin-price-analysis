@@ -6,7 +6,6 @@ import os
 import requests
 import websocket
 import json
-import joblib
 import pandas as pd
 import time
 import rel
@@ -17,21 +16,11 @@ from features.price import calculate_lagged_close
 from features.technical import calculate_rsi
 from features.volatility import calculate_rolling_volatility, calculate_ewma_volatility, calculate_parkinson_volatility
 
-MODEL_PATH = "./arima-btc-closing-price.pkl"
+
 BTC_SENTIMENTDATA_URL = "https://api.alternative.me/fng/?limit=1&date_format=kr"
 BTCUSD_STREAM_URL = "wss://fstream.binance.com/ws/btcusdt"
 
-def load_model():
-    """
-    Load the generated model from `gen.py` script
 
-    Returns:
-    Model: The generated model from `gen.py`
-    """
-    if not os.path.exists(MODEL_PATH):
-        print(f"The file '{MODEL_PATH}' does not exist")
-        return
-    return joblib.load(MODEL_PATH)
 
 def get_daily_sentiment_data():
     """
@@ -87,7 +76,7 @@ def handle_is_enough_data(df, minimum_rows=120):
     """
     return len(df) >= minimum_rows
 
-def prepare_exog_data(model, df, stream_data):
+def prepare_exog_data(df, stream_data, fng_value):
     """
     Prepare exogenous variables for the next time step
 
@@ -117,6 +106,7 @@ def prepare_exog_data(model, df, stream_data):
     is_enough_data = handle_is_enough_data(df)
     if is_enough_data:
         print("Calculating features...")
+
         # Price
         for lag in [90, 120]:
             calculate_lagged_close(df, lag)
@@ -143,34 +133,17 @@ def prepare_exog_data(model, df, stream_data):
                             'atr_24', 'fng_value']  # Example of required columns
         
         # Remove columns with NaNs for prediction only
-        df_for_prediction = df_last_row[required_columns].dropna(axis=1) 
-         # Ensure all columns are numeric
-        df_for_prediction = df_for_prediction.apply(pd.to_numeric, errors='coerce')
+    # df_for_prediction = df_last_row[required_columns].dropna(axis=1) 
+    # Ensure all columns are numeric
+    # df_for_prediction = df_for_prediction.apply(pd.to_numeric, errors='coerce')
 
-        predicted_price = predict_next_price(model, df_for_prediction)
-        df.loc[df.index[-1], 'predicted_closing_price'] = predicted_price
+    # predicted_price = predict_next_price(model, df_for_prediction)
+    # df.loc[df.index[-1], 'predicted_closing_price'] = predicted_price
     return df
 
-def predict_next_price(model, exog_data):
-    """
-    Use the ARIMA model to predict the next closing price.
 
-    Parameters:
-    model (ARIMA): The fitted ARIMA model.
-    exog_data (DataFrame): The exogenous variables for the prediction.
 
-    Returns:
-    float: The predicted next closing price.
-    """
-    # Forecast the next time step
-    forecast = model.get_forecast(steps=1, exog=exog_data)
-    print(forecast)
-    
-    # Extract the predicted mean (point forecast)
-    predicted_price = forecast.predicted_mean.iloc[0]
-    return predicted_price
-
-def on_message_with_model(model, filename, df):
+def on_message_with_model(filename, df):
     """
     Creates a WebSocket `on_message` callback to handle incoming messages, 
     process them with a given model, and log results to a CSV file.
@@ -206,9 +179,11 @@ def on_message_with_model(model, filename, df):
     function: A callback function to handle WebSocket messages.
     """
     last_processed_hour = None  # Store the last processed hour
+    last_fng_fetch_time = None
+    last_fng_value = None
 
     def on_message(ws, message):
-        nonlocal last_processed_hour  # Allow access to the outer variable
+        nonlocal last_processed_hour, last_fng_fetch_time, last_fng_value  # Allow access to the outer variable
         data = json.loads(message)
         current_timestamp = int(data['E'])  # Current message timestamp in milliseconds
         # Convert current timestamp to datetime object
@@ -223,8 +198,13 @@ def on_message_with_model(model, filename, df):
         # Update the last processed hour to the current hour
         last_processed_hour = current_hour
 
+        # Fetch FNG value only once per day
+        if last_fng_fetch_time is None or (datetime.now() - last_fng_fetch_time).days >= 1:
+            last_fng_value, _, _ = get_daily_sentiment_data()
+            last_fng_fetch_time = datetime.now()
+
         # Prepare exogenous data and get the updated DataFrame
-        ndf = prepare_exog_data(model, df, data)
+        ndf = prepare_exog_data(df, data, last_fng_value)
         
         # Overwrite the CSV with the updated DataFrame
         ndf.to_csv(filename, index=False) 
@@ -273,14 +253,13 @@ def on_ping(ws, message):
     ws.send(message, websocket.ABNF.OPCODE_PONG)
 
 def main():
-    model = load_model()
     filename = "BTCUSD_trading.csv"  
     error_log_filename = "BTCUSD_trading_errors.txt"
 
     # Initialize the CSV with headers only if the file does not exist
     if not os.path.exists(filename):
         with open(filename, 'w') as f:
-            f.write("date,open,high,low,close,Volume BTC,Volume USD,close_lag_90,close_lag_120,MA_7,MA_24,rsi,volatility_24,volatility_ewma_24,parkinson_volatility,atr_24,fng_value,predicted_closing_price\n")
+            f.write("date,open,high,low,close,Volume BTC,Volume USD,close_lag_90,close_lag_120,MA_7,MA_24,rsi,volatility_24,volatility_ewma_24,parkinson_volatility,atr_24,fng_value\n")
 
     # Initialize the error log with headers only if the file does not exist
     if not os.path.exists(error_log_filename):
@@ -294,10 +273,10 @@ def main():
         df = pd.DataFrame(columns=["date", "open", "high", "low", "close", "Volume BTC", "Volume USD", 
                                    "close_lag_90", "close_lag_120", "MA_7", "MA_24", "rsi", 
                                    "volatility_24", "volatility_ewma_24", "parkinson_volatility", 
-                                   "atr_24", "fng_value", "predicted_closing_price"])
+                                   "atr_24", "fng_value"])
 
     ws = websocket.WebSocketApp(BTCUSD_STREAM_URL,
-                            on_message=on_message_with_model(model, filename, df),
+                            on_message=on_message_with_model(filename, df),
                             on_error=on_error_with_timestamp(error_log_filename),  # Use the error log filename
                             on_close=on_close,
                             on_open=on_open,

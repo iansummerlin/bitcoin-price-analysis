@@ -1,10 +1,5 @@
 # Ignore virtual environment files and directories
-
-bin/
-include/
-lib/
-lib64/
-pyvenv.cfg
+.venv
 
 # Ignore PNG files
 *.png

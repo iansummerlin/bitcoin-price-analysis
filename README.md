@@ -2,19 +2,29 @@
 
 ## Getting started
 
-- If using venv
-
-Initialise
+- Initialise
 
 ```bash
-python3 venv -m ~/.venv
+python3 -m venv .venv
 ```
 
-Activate
+---
+
+- Activate
 
 ```bash
-source ~/.venv/bin/activate
+source .venv/bin/activate
 ```
+
+---
+
+- Install dependencies
+
+```bash
+pip3 install -r requirements.txt
+```
+
+---
 
 - Generate model
 
@@ -22,13 +32,54 @@ source ~/.venv/bin/activate
 python3 gen.py
 ```
 
-- Run model
+To run `gen.py` in the background as a persistent process (so it doesn't stop when you close your terminal):
 
 ```bash
-python3 main.py
+nohup ./.venv/bin/python3 gen.py &
 ```
 
-NOTE: the first time downloading the csv data you will need to do some manual formatting. Maybe i'll automate this step one day.
+This command uses `nohup` to prevent the process from being terminated when the controlling terminal is closed, and `&` to run it in the background. Output will be redirected to `nohup.out` by default.
+
+NOTE: this wil fail on the first run, fix the following manually.
+
+- the BTCUSD_1H.csv chart needs to have the url removed from the first line of the csv.
+- the BTC_sentiment.csv will be wrapped in json and the columns need reordering (date is first column and it has it as the last)
+
+---
+
+- Run data collection
+
+```bash
+python3 collect.py
+```
+
+To run `collect.py` in the background as a persistent process (so it doesn't stop when you close your terminal):
+
+```bash
+nohup ./.venv/bin/python3 collect.py &
+```
+
+This command uses `nohup` to prevent the process from being terminated when the controlling terminal is closed, and `&` to run it in the background. Output will be redirected to `nohup.out` by default.
+
+This script connects to the Binance WebSocket stream to collect real-time BTCUSDT data and calculate features, logging everything to `BTCUSD_trading.csv`.
+
+---
+
+- Run trading bot
+
+```bash
+python3 trade.py
+```
+
+This script reads the `BTCUSD_trading.csv` file, loads the pre-trained model, makes price predictions, and logs trade actions to `BTCUSD_predictions_trades.csv`.
+
+## Running Tests
+
+To run the tests for this project, use the following command:
+
+```bash
+python3 -m unittest test_features.py
+```
 
 ## Research
 
