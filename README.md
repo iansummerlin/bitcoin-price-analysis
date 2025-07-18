@@ -55,6 +55,16 @@ This command uses `nohup` to prevent the process from being terminated when the 
 
 This script connects to the Binance WebSocket stream to collect real-time BTCUSDT data and calculate features, logging everything to `BTCUSD_trading.csv`.
 
+To stop the `collect.py` process if it was run with `nohup`:
+
+1.  **Stopping the collect process:**
+
+```bash
+pgrep -f "python3 collect.py" | xargs kill
+```
+
+This command finds the PID of the running `collect.py` script and kills it in one step.
+
 ---
 
 - Run trading bot

@@ -60,13 +60,18 @@ BTC_CLOSING_PRICE_CHART_PATH = "bitcoin-closing-price.png"
 BTC_ACTUAL_VS_PREDICTED_CHART_PATH = "bitcoin-actual-vs-predicted-price.png"
 ARIMA_CLOSING_PRICE_MODEL = "arima-btc-closing-price.pkl"
 
-def download_data():
-    """Download both BTC price and sentiment data."""
+def download_data(replace=False):
+    """
+    Download both BTC price and sentiment data.
+
+    Parameters:
+    replace (bool): Whether to replace existing files.
+    """
     print("Step 1/8: Downloading data...")
     print("  - Downloading BTC price data...")
-    download_file(BTC_PRICEDATA_1H_URL, BTC_PRICEDATA_PATH)
+    download_file(BTC_PRICEDATA_1H_URL, BTC_PRICEDATA_PATH, replace)
     print("  - Downloading sentiment data...")
-    download_file(BTC_SENTIMENTDATA_URL, BTC_SENTIMENTDATA_PATH)
+    download_file(BTC_SENTIMENTDATA_URL, BTC_SENTIMENTDATA_PATH, replace)
     print("✓ Data download complete")
 
 def merge_sentiment_data(df):
