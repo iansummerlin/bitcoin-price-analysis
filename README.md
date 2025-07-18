@@ -32,14 +32,6 @@ pip3 install -r requirements.txt
 python3 gen.py
 ```
 
-To run `gen.py` in the background as a persistent process (so it doesn't stop when you close your terminal):
-
-```bash
-nohup ./.venv/bin/python3 gen.py &
-```
-
-This command uses `nohup` to prevent the process from being terminated when the controlling terminal is closed, and `&` to run it in the background. Output will be redirected to `nohup.out` by default.
-
 NOTE: this wil fail on the first run, fix the following manually.
 
 - the BTCUSD_1H.csv chart needs to have the url removed from the first line of the csv.
