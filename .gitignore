@@ -27,3 +27,5 @@
 # Exclude requirements.txt from being ignored
 !requirements.txt
 
+# nohup.out
+nohup.out
