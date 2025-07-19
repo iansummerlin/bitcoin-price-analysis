@@ -5,7 +5,7 @@ def print_divider():
     """Print a divider to improve organisation of print statements."""
     print("------------------------")
 
-def download_file(url, path, replace=False):
+def download_file(url, path):
     """
     Download a file from a URL if it doesn't already exist.
 
@@ -15,7 +15,7 @@ def download_file(url, path, replace=False):
     """
     print_divider()
     print(f"Downloading file from {url}...")
-    if os.path.exists(path) and not replace:
+    if os.path.exists(path):
         print(f"The file '{path}' already exists.")
         return
     
