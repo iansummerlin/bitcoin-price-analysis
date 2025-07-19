@@ -77,8 +77,8 @@ def main():
 
         try:
             df = pd.read_csv(filename)
-            if df.empty:
-                print(f"Waiting for data in {filename}...")
+            if len(df) < 121:
+                print(f"Waiting for more data in {filename}...")
                 time.sleep(60)
                 continue
 
