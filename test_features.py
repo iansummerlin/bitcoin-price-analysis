@@ -1,7 +1,6 @@
 
 import unittest
 import pandas as pd
-from datetime import datetime
 from collect import prepare_exog_data
 from unittest.mock import patch
 

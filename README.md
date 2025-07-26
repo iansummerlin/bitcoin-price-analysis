@@ -75,6 +75,16 @@ python3 trade.py
 
 This script reads the `BTCUSD_trading.csv` file, loads the pre-trained model, makes price predictions, and logs trade actions to `BTCUSD_predictions_trades.csv`.
 
+## View Trade Log
+
+To view the `trade.html` page, which displays the `BTCUSD_predictions_trades.csv` data, you need to run a local web server. Navigate to the project's root directory in your terminal and execute the following command:
+
+```bash
+python3 -m http.server 4242
+```
+
+After starting the server, open your web browser and go to `http://localhost:8000/trade.html`. The page will automatically update with the latest data from `BTCUSD_predictions_trades.csv` every 5 seconds.
+
 ## Running Tests
 
 To run the tests for this project, use the following command:

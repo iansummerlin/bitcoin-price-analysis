@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BTCUSD Predictions and Trades</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>BTCUSD Predictions and Trades Log</h1>
+    <div id="profitability-metrics">
+      <p>Total Trades: <span id="total-trades">0</span></p>
+      <p>Total Spent: <span id="total-spent">0</span></p>
+      <p>Total Profit: <span id="total-profit">0</span></p>
+      <p>Total Balance (USD): <span id="total-balance">0</span></p>
+      <p>Total BTC Amount: <span id="total-btc-amount">0</span></p>
+      <p>Total Value: <span id="total-value">0</span></p>
+      <p>Net Profit/Loss: <span id="net-profit-loss">0</span></p>
+    </div>
+    <p>Last updated: <span id="last-updated">Never</span></p>
+    <table id="trade-log-table">
+      <thead>
+        <tr></tr>
+        <!-- Headers will be inserted here by JS -->
+      </thead>
+      <tbody>
+        <!-- Data will be inserted here by JS -->
+      </tbody>
+    </table>
+    <script>
+      const csvFilePath = "BTCUSD_predictions_trades.csv";
+      const updateInterval = 5000; // Update every 5 seconds
+
+      async function fetchAndDisplayCsv() {
+        try {
+          const response = await fetch(csvFilePath);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const csvText = await response.text();
+          parseAndDisplay(csvText);
+          document.getElementById("last-updated").textContent =
+            new Date().toLocaleString();
+        } catch (error) {
+          console.error("Error fetching CSV:", error);
+          document.getElementById(
+            "last-updated"
+          ).textContent = `Error: ${error.message}`;
+        }
+      }
+      function parseAndDisplay(csvText) {
+        const lines = csvText.trim().split("\n");
+        if (lines.length === 0) return;
+
+        const tableHead = document.querySelector("#trade-log-table thead tr");
+        const tableBody = document.querySelector("#trade-log-table tbody");
+        // Clear previous content
+        tableHead.innerHTML = "";
+        tableBody.innerHTML = "";
+        // Headers
+        const headers = lines[0].split(",");
+        headers.forEach((header) => {
+          const th = document.createElement("th");
+          th.textContent = header.trim();
+          tableHead.appendChild(th);
+        });
+
+        let totalSpent = 0;
+        let totalProfit = 0;
+        let totalTrades = 0;
+        let totalBtcAmount = 0;
+
+        // Data rows
+        for (let i = 1; i < lines.length; i++) {
+          const row = document.createElement("tr");
+          const cells = lines[i].split(",");
+          const rowData = {};
+          headers.forEach((header, index) => {
+            rowData[header.trim().toLowerCase()] = cells[index].trim();
+          });
+
+          cells.forEach((cell) => {
+            const td = document.createElement("td");
+            td.textContent = cell.trim();
+            row.appendChild(td);
+          });
+          tableBody.appendChild(row);
+          totalTrades++;
+
+          const tradeAction = rowData.trade_action;
+          const amountTraded = parseFloat(rowData.amount_traded);
+          const currentClosePrice = parseFloat(rowData.current_close_price);
+
+          if (tradeAction === "BUY") {
+            totalSpent += amountTraded;
+            totalBtcAmount += amountTraded / currentClosePrice;
+          } else if (tradeAction === "SELL") {
+            totalProfit += amountTraded * currentClosePrice;
+            totalBtcAmount -= amountTraded;
+          }
+        }
+
+        document.getElementById("total-trades").textContent = totalTrades;
+        document.getElementById("total-spent").textContent =
+          totalSpent.toFixed(2);
+        document.getElementById("total-profit").textContent =
+          totalProfit.toFixed(2);
+        document.getElementById("total-balance").textContent = (
+          10000 +
+          totalProfit -
+          totalSpent
+        ).toFixed(2); // Assuming initial balance of 10000
+        document.getElementById("total-btc-amount").textContent =
+          totalBtcAmount.toFixed(8);
+
+        const initialBalance = 10000;
+        const lastClosingPrice = parseFloat(
+          lines[lines.length - 1].split(",")[
+            headers.indexOf("current_close_price")
+          ]
+        );
+        const btcValue = totalBtcAmount * lastClosingPrice;
+        const totalValue = initialBalance + totalProfit - totalSpent + btcValue;
+        document.getElementById("total-value").textContent =
+          totalValue.toFixed(2);
+
+        document.getElementById("net-profit-loss").textContent = (
+          totalValue - initialBalance
+        ).toFixed(2);
+      }
+      // Initial fetch
+      fetchAndDisplayCsv();
+      // Set up interval for periodic updates
+      setInterval(fetchAndDisplayCsv, updateInterval);
+    </script>
+  </body>
+</html>

@@ -66,6 +66,33 @@ This script uses the trained model to make predictions on the collected data and
     *   It continuously reads the latest data from `BTCUSD_trading.csv`.
     *   It makes predictions and logs trading decisions to `BTCUSD_predictions_trades.csv`.
 
+## How It Works: A Step-by-Step Flow
+
+1.  **Run `gen.py`**:
+    *   This script is executed first to download historical data, perform feature engineering, and train the ARIMA model.
+    *   The output is a trained model file (`arima-btc-closing-price.pkl`) and some analytical charts.
+
+2.  **Run `collect.py`**:
+    *   This script is executed to start the data collection process.
+    *   It connects to Binance and starts listening for live data.
+    *   As new data arrives, it continuously calculates features and logs the results to `BTCUSD_trading.csv`.
+
+3.  **Run `trade.py`**:
+    *   This script is executed to start the trading bot.
+    *   It loads the model created by `gen.py`.
+    *   It continuously reads the latest data from `BTCUSD_trading.csv`.
+    *   It makes predictions and logs trading decisions to `BTCUSD_predictions_trades.csv`.
+
+## Viewing the Trade Log
+
+To view the `trade.html` page, which displays the `BTCUSD_predictions_trades.csv` data, you need to run a local web server. Navigate to the project's root directory in your terminal and execute the following command:
+
+```bash
+python3 -m http.server 8000
+```
+
+After starting the server, open your web browser and go to `http://localhost:8000/trade.html`. The page will automatically update with the latest data from `BTCUSD_predictions_trades.csv` every 5 seconds.
+
 ## Project Structure
 
 ```

@@ -211,6 +211,7 @@ def grid_search_arima(df, p_values, d_values, q_values):
                 best_aic = model_fit.aic
                 best_order = (p, d, q)
         except Exception as e:
+            print(f"    Error testing combination ({p},{d},{q}): {e}")
             continue
     
     print(f"  ✓ Grid search complete - Best order: {best_order}, AIC: {best_aic:.2f}")

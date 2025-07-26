@@ -1,8 +1,12 @@
+"""
+Trades Wrapped BTC (WBTC) on the predictions of the ARIMA model and other factors (TBC).
+
+Always check https://l2fees.info/ for the latest fees.
+"""
 import os
 import joblib
 import pandas as pd
 import time
-from datetime import datetime
 
 MODEL_PATH = "./arima-btc-closing-price.pkl"
 
