@@ -11,13 +11,15 @@ def calculate_rsi(df, window_length=14):
     """
     # Calculate the difference in closing prices
     delta = df['close'].diff()
-    
+
     # Calculate gains and losses
     gain = (delta.where(delta > 0, 0)).rolling(window=window_length).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=window_length).mean()
-    
+
     # Calculate the Relative Strength (RS)
-    rs = gain / loss
-    
-    # Calculate the RSI
+    # Guard against division by zero: when loss is 0, RSI is 100
+    rs = gain / loss.replace(0, float('nan'))
+
+    # Calculate the RSI — where loss was 0 (rs is NaN), RSI should be 100
     df['rsi'] = 100 - (100 / (1 + rs))
+    df['rsi'] = df['rsi'].fillna(100)

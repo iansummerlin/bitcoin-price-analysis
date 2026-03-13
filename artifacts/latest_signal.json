@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-07-12T22:00:00+00:00",
+  "instrument": "BTCUSD",
+  "model_version": "xgboost_direction",
+  "feature_schema_version": "2026-03-13",
+  "signal_schema_version": "2026-03-13",
+  "prediction": 0.0,
+  "probability": 0.4552219432922527,
+  "actionable": false,
+  "generated_at": "2026-03-13T15:15:01.792992+00:00"
+}

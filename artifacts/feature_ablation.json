@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-03-13T15:14:47.590552+00:00",
+  "evaluation_rows": 5760,
+  "scores": {
+    "core_price": {
+      "directional_accuracy": 0.7086111111111112,
+      "precision": 0.18400631744237098,
+      "recall": 0.2738526844661814,
+      "f1": 0.1729854573394063,
+      "positive_rate": 0.23138888888888892,
+      "roc_auc": 0.5826375269671002,
+      "fit_accuracy": 0.8400000000000001,
+      "fit_positive_rate": 0.18314814814814814
+    },
+    "trend": {
+      "directional_accuracy": 0.6594444444444444,
+      "precision": 0.173179683792839,
+      "recall": 0.35345546069472455,
+      "f1": 0.17783547547675962,
+      "positive_rate": 0.3122222222222222,
+      "roc_auc": 0.5901584357627122,
+      "fit_accuracy": 0.8418518518518517,
+      "fit_positive_rate": 0.18314814814814814
+    },
+    "volatility": {
+      "directional_accuracy": 0.6738888888888889,
+      "precision": 0.1788442935262752,
+      "recall": 0.29641678703028396,
+      "f1": 0.17078368949623118,
+      "positive_rate": 0.27166666666666667,
+      "roc_auc": 0.5866620384288614,
+      "fit_accuracy": 0.8392592592592593,
+      "fit_positive_rate": 0.18314814814814814
+    },
+    "volume": {
+      "directional_accuracy": 0.663888888888889,
+      "precision": 0.17799422702061682,
+      "recall": 0.3320322622163113,
+      "f1": 0.17549397050294718,
+      "positive_rate": 0.29333333333333333,
+      "roc_auc": 0.5937269638986905,
+      "fit_accuracy": 0.8396296296296295,
+      "fit_positive_rate": 0.18314814814814814
+    },
+    "sentiment": {
+      "directional_accuracy": 0.6594444444444445,
+      "precision": 0.1652260709199927,
+      "recall": 0.3270115024716252,
+      "f1": 0.16901657085336722,
+      "positive_rate": 0.2966666666666667,
+      "roc_auc": 0.5945706131552566,
+      "fit_accuracy": 0.8396296296296295,
+      "fit_positive_rate": 0.18314814814814814
+    },
+    "momentum": {
+      "directional_accuracy": 0.655,
+      "precision": 0.15336024015340904,
+      "recall": 0.32696397671857796,
+      "f1": 0.1605732411880102,
+      "positive_rate": 0.3038888888888889,
+      "roc_auc": 0.5971553431290321,
+      "fit_accuracy": 0.8399074074074073,
+      "fit_positive_rate": 0.18314814814814814
+    }
+  }
+}

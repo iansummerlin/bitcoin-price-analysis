@@ -1,115 +1,187 @@
-# Bitcoin price analysis
+# Bitcoin Signal Research
 
-## Getting started
+This repository is a Bitcoin signal-generation, model-research, evaluation, and signal-export repo for a separate trading strategy/execution system.
 
-- Initialise
+It does not place trades. It exists to answer one question honestly: is there a Bitcoin signal here that is strong enough to be worth consuming downstream after realistic costs?
+
+The canonical execution plan and progress tracker live in [ROADMAP.md](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/ROADMAP.md).
+
+## Current Judgment
+
+As of March 13, 2026, this repo is materially more credible as a research system than it was, but it is still `research-only`, not a justified trading-strategy dependency.
+
+The latest verified walk-forward result in this repo used the local historical dataset ending on July 17, 2025 and evaluated the cost-adjusted directional classifier over the most recent 365 days in that dataset. The current `xgboost_direction` model beat naive directional baselines on headline accuracy and ROC-AUC, but its actionable precision/recall remain weak:
+
+- directional accuracy: `0.829`
+- precision on cost-adjusted up moves: `0.215`
+- recall on cost-adjusted up moves: `0.030`
+- ROC-AUC: `0.634`
+
+That is not good enough to claim a robust deployable signal. The repo now fails honestly and exports artifacts cleanly, but the present evidence does not justify downstream strategy integration.
+
+The routine family-comparison artifact in `artifacts/model_comparison.json` is stricter because it uses a faster repeated-check comparison slice and explicit acceptance thresholds. On that comparison run, `xgboost_direction` remained the best family, but still missed the integration bar:
+
+- precision: `0.097`
+- recall: `0.051`
+- ROC-AUC: `0.596`
+
+Current provisional integration thresholds:
+
+- precision >= `0.55`
+- recall >= `0.15`
+- ROC-AUC >= `0.60`
+
+## Architecture
+
+The current architecture is:
+
+```text
+.
+├── data/         # canonical loaders, validation, dataset assembly
+├── evaluation/   # targets, baselines, walk-forward evaluation, ablation/comparison
+├── features/     # deterministic feature engineering functions + canonical pipeline
+├── models/       # model interface, ARIMA baseline, tree-based models
+├── signals/      # downstream signal export and validation
+├── scripts/      # thin CLI wrappers for comparison, ablation, export
+├── tests/        # unit + integration coverage for the research workflow
+├── backtest.py   # evaluation entrypoint
+├── collect.py    # backfill-first live analytics preparation
+├── gen.py        # training entrypoint
+├── README.md
+└── ROADMAP.md
+```
+
+## Source Policy
+
+- Research/training market: `Gemini BTCUSD spot 1h`
+- Optional live monitoring market: `Binance BTCUSDT spot 1h`
+- Sentiment: `alternative.me Fear & Greed`
+- Canonical timezone: `UTC`
+
+Training and evaluation use one canonical dataset builder in [data/pipeline.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/data/pipeline.py). Live analytics bootstrap from that same historical feature state before appending new candles in [collect.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/collect.py).
+
+## Core Workflow
+
+Setup:
 
 ```bash
 python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
 
----
-
-- Activate
+Train the current default model and write model metadata:
 
 ```bash
-source .venv/bin/activate
+.venv/bin/python gen.py
 ```
 
----
-
-- Install dependencies
+Run the default walk-forward evaluation:
 
 ```bash
-pip3 install -r requirements.txt
+.venv/bin/python backtest.py
 ```
 
----
-
-- Generate model
+Run the full test suite:
 
 ```bash
-python3 gen.py
+.venv/bin/python -m pytest -q
 ```
 
-NOTE: this wil fail on the first run, fix the following manually.
-
-- the BTCUSD_1H.csv chart needs to have the url removed from the first line of the csv.
-- the BTC_sentiment.csv will be wrapped in json and the columns need reordering (date is first column and it has it as the last)
-
----
-
-- Run data collection
+Run feature ablation:
 
 ```bash
-python3 collect.py
+.venv/bin/python scripts/run_ablation.py
 ```
 
-To run `collect.py` in the background as a persistent process (so it doesn't stop when you close your terminal):
+Run the routine model-family comparison:
 
 ```bash
-nohup ./.venv/bin/python3 collect.py &
+.venv/bin/python scripts/compare_models.py
 ```
 
-This command uses `nohup` to prevent the process from being terminated when the controlling terminal is closed, and `&` to run it in the background. Output will be redirected to `nohup.out` by default.
-
-This script connects to the Binance WebSocket stream to collect real-time BTCUSDT data and calculate features, logging everything to `BTCUSD_trading.csv`.
-
-To stop the `collect.py` process if it was run with `nohup`:
-
-**Stopping the collect process:**
+Export the latest prediction to the downstream contract:
 
 ```bash
-pgrep -f "python3 collect.py" | xargs kill
+.venv/bin/python scripts/export_latest_signal.py
 ```
 
-This command finds the PID of the running `collect.py` script and kills it in one step.
+Or use `make test`, `make train`, `make backtest`, `make compare`, `make ablate`, and `make export-signal`.
 
----
+## Data, Feature, and Target Contracts
 
-- Run trading bot
+Canonical feature generation lives in [features/pipeline.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/features/pipeline.py). The active feature set includes:
 
-```bash
-python3 trade.py
-```
+- lagged closes across short and medium lookbacks,
+- return and log-return features,
+- multi-horizon moving averages and MA spreads,
+- RSI,
+- volatility and ATR features,
+- volume z-scores,
+- multi-timeframe trend regime features,
+- Fear & Greed sentiment.
 
-This script reads the `BTCUSD_trading.csv` file, loads the pre-trained model, makes price predictions, and logs trade actions to `BTCUSD_predictions_trades.csv`.
+Trading-aligned targets live in [evaluation/targets.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/evaluation/targets.py):
 
-## View Trade Log
+- `target_close_next`
+- `target_simple_return_1`
+- `target_log_return_1`
+- `target_direction_1`
+- `target_direction_cost_adj`
+- `target_actionable_move`
 
-To view the `trade.html` page, which displays the `BTCUSD_predictions_trades.csv` data, you need to run a local web server. Navigate to the project's root directory in your terminal and execute the following command:
+The default training target is the cost-adjusted directional label, not raw next-close prediction.
 
-```bash
-python3 -m http.server 4242
-```
+## Evaluation Contract
 
-After starting the server, open your web browser and go to `http://localhost:8000/trade.html`. The page will automatically update with the latest data from `BTCUSD_predictions_trades.csv` every 5 seconds.
+[evaluation/walk_forward.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/evaluation/walk_forward.py) is the canonical scoring harness. It provides:
 
-## Running Tests
+- strict train-on-past / predict-on-future walk-forward windows,
+- baseline comparisons on identical windows,
+- timestamped prediction artifacts,
+- forecast metrics for regression targets,
+- directional metrics for trading-aligned classification targets.
 
-To run the tests for this project, use the following command:
+Naive prediction logic remains only as explicit baseline scaffolding in [backtest.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/backtest.py).
 
-```bash
-python3 -m unittest test_features.py
-```
+## Downstream Signal Contract
 
-## Research
+The first integration mode is a versioned file artifact written by [signals/export.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/signals/export.py).
 
-[] Gradient boosting machines (XGBoost, LightGBM or CatBoost), these models are good for regression tasks,
-predicting future prices, or understanding feature importance.
+`artifacts/latest_signal.json` contains:
 
-[] Deep learning (LSTM or GRUs), specialised for sequential data. Great for capturing long-term dependencies
-and complex patterns in price data. Particularly useful with large datasets.
+- `timestamp`
+- `instrument`
+- `model_version`
+- `feature_schema_version`
+- `signal_schema_version`
+- `prediction`
+- `probability`
+- `actionable`
+- `generated_at`
 
-[] Recurrent neural nets (temporal data, RNNs and variations). Designed for handling time series data and sequential dependencies
-effectively.
+Artifact validation checks required fields and freshness before a downstream repo should accept the signal.
 
-[] GANS (Generative Adversarial Networks) can be used to simulate and generate synthetic price data for testing
-trading strategies and risk analysis.
+## Artifacts
 
-[] Bayesian machine learning - can help in probabalistic modeling, providing a range of possible outcomes and
-quantifying uncertainty in predictions. Especially good for volatile assets like Bitcoin.
+Current generated artifacts live in `artifacts/`:
 
-## Resources
+- `dataset_metadata.json`
+- `xgboost_direction.joblib`
+- `xgboost_direction.metadata.json`
+- `xgboost_direction_predictions.csv`
+- `xgboost_direction_predictions.summary.json`
+- `feature_ablation.json`
+- `model_comparison.json`
+- `latest_signal.json`
 
-- [machine-learning-for-trading](https://github.com/stefan-jansen/machine-learning-for-trading/).
+Historical 2025 outputs such as old plots and the legacy ARIMA pickle were removed because they were stale clutter, not evidence.
+
+## Limitations
+
+- The local historical dataset currently ends on July 17, 2025. Results are structurally stale until fresher data is ingested and re-evaluated.
+- The current best model does not yet show strong enough cost-aware precision/recall to justify integration into a trading strategy repo.
+- `scripts/compare_models.py` exists for reproducible family comparison, but ARIMA evaluation is still materially slower than the tree-based path and should be treated as research tooling, not a fast daily check.
+
+## Decision
+
+This repo is now a useful research and signal-export foundation, but not yet a genuinely useful production signal provider for a trading strategy repo. It should remain research-only until it shows materially better cost-aware edge on fresher data.

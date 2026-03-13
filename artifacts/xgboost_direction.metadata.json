@@ -1,0 +1,31 @@
+{
+  "model_name": "xgboost_direction",
+  "target_column": "target_direction_cost_adj",
+  "feature_columns": [
+    "close_lag_1",
+    "close_lag_6",
+    "close_lag_24",
+    "close_lag_90",
+    "close_lag_120",
+    "return_1",
+    "return_24",
+    "log_return_1",
+    "MA_7",
+    "MA_24",
+    "MA_72",
+    "ma_spread_7_24",
+    "ma_spread_24_72",
+    "rsi",
+    "volatility_24",
+    "volatility_ewma_24",
+    "parkinson_volatility",
+    "atr_24",
+    "atr_pct",
+    "volume_btc_zscore_24",
+    "volume_usd_zscore_24",
+    "trend_regime_24",
+    "trend_regime_72",
+    "fng_value"
+  ],
+  "trained_at": "2026-03-13T12:36:05.412586+00:00"
+}
