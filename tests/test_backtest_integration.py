@@ -13,7 +13,7 @@ from config import DEFAULT_DIRECTION_TARGET_COLUMN
 from evaluation.targets import add_targets
 from evaluation.walk_forward import iter_walk_forward_slices, walk_forward_evaluate
 from signals.export import export_latest_signal, validate_signal_artifact
-from strategies import MultiFactorStrategy, ThresholdStrategy
+from evaluation.signal_rules import MultiFactorRule, ThresholdRule
 
 
 def _make_historical_df(n: int = 600, seed: int = 42) -> pd.DataFrame:
@@ -43,7 +43,7 @@ class TestBacktestCompatibilityHelpers(unittest.TestCase):
         df = _make_historical_df(350)
         naive = generate_naive_predictions(df)
         self.assertIn("predicted_price", naive.columns)
-        portfolio, buy_hold = run_backtest(naive, ThresholdStrategy())
+        portfolio, buy_hold = run_backtest(naive, ThresholdRule())
         self.assertEqual(len(portfolio.equity_curve), len(naive))
         self.assertEqual(len(buy_hold), len(naive))
 

@@ -1,4 +1,4 @@
-.PHONY: test train collect backtest compare ablate export-signal setup
+.PHONY: test train collect backtest regression-gate compare ablate export-signal setup
 
 # Run all tests
 test:
@@ -19,6 +19,9 @@ collect:
 # Run backtests
 backtest:
 	.venv/bin/python backtest.py
+
+regression-gate:
+	.venv/bin/python -m evaluation.regression_gate
 
 compare:
 	.venv/bin/python scripts/compare_models.py

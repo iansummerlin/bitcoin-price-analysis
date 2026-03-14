@@ -324,15 +324,17 @@ This section exists so a fresh agent can map the current repository shape to the
   - Problems: does not yet prove the key repo claims end to end.
   - Intended future role: reproducibility and regression safety net for the real workflow.
 
+### Files moved into evaluation/
+
+- `evaluation/cost_model.py` (was `portfolio.py`)
+  - Role: cost simulation for signal-usefulness evaluation. Tracks hypothetical cash, holdings, and equity to compute cost-adjusted metrics.
+
+- `evaluation/signal_rules.py` (was `strategies.py`)
+  - Role: signal-consumption rules that translate predictions into discrete ENTRY/EXIT/HOLD decisions for the evaluation harness.
+
+- `portfolio.py` / `strategies.py` — thin backward-compatibility shims that re-export from the evaluation modules. Will be removed once no external callers remain.
+
 ### Files likely to keep as secondary support
-
-- `portfolio.py`
-  - Current role: trade/accounting simulation.
-  - Intended future role: only keep if needed for signal usefulness evaluation; do not let it drive repo scope.
-
-- `strategies.py`
-  - Current role: strategy logic for threshold/ATR/multi-factor decisions.
-  - Intended future role: keep only insofar as needed to test downstream signal consumption assumptions.
 
 - `utils.py`
   - Current role: small utilities.

@@ -8,22 +8,7 @@ The canonical execution plan and progress tracker live in [ROADMAP.md](/home/ixn
 
 ## Current Judgment
 
-As of March 14, 2026, this repo is `research-only`, not a justified trading-strategy dependency.
-
-The dataset was refreshed on March 14, 2026 (price data through March 13, 2026; sentiment through March 14, 2026). The latest walk-forward evaluation on fresh data:
-
-- directional accuracy: `0.721`
-- precision on cost-adjusted up moves: `0.169`
-- recall on cost-adjusted up moves: `0.261`
-- ROC-AUC: `0.641`
-
-Recall now clears the threshold (>= 0.15) and ROC-AUC is above threshold (>= 0.60), but precision remains far below (needs >= 0.55). The model catches real moves but cannot distinguish them from noise with the current feature set. This confirms the next priority is expanding the data universe (on-chain, cross-asset, microstructure) — see Phase 12 in `ROADMAP.md`.
-
-Current provisional integration thresholds:
-
-- precision >= `0.55`
-- recall >= `0.15`
-- ROC-AUC >= `0.60`
+As of March 14, 2026, this repo is `research-only`, not a justified trading-strategy dependency. The model does not yet clear the integration bar. See `BACKTEST.md` for the latest metrics and history.
 
 ## Architecture
 
@@ -32,7 +17,8 @@ The current architecture is:
 ```text
 .
 ├── data/         # canonical loaders, validation, dataset assembly
-├── evaluation/   # targets, baselines, walk-forward evaluation, ablation/comparison
+├── evaluation/   # targets, baselines, walk-forward evaluation, ablation/comparison,
+│                 #   cost simulation (cost_model.py), signal rules (signal_rules.py)
 ├── features/     # deterministic feature engineering functions + canonical pipeline
 ├── models/       # model interface, ARIMA baseline, tree-based models
 ├── signals/      # downstream signal export and validation
@@ -63,43 +49,46 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Train the current default model and write model metadata:
-
 ```bash
-.venv/bin/python gen.py
+make train             # train the default model
+make backtest          # walk-forward evaluation + history + regression gate
+make test              # run full test suite
+make regression-gate   # compare latest backtest against previous run
+make compare           # model family comparison
+make ablate            # feature ablation
+make export-signal     # export latest signal artifact
 ```
 
-Run the default walk-forward evaluation:
+## Backtests
 
-```bash
-.venv/bin/python backtest.py
-```
+Every `make backtest` run automatically:
 
-Run the full test suite:
+1. Runs strict walk-forward evaluation (train-on-past, predict-on-future).
+2. Appends the result to `artifacts/backtest_history.json` (max 10 entries, newest first).
+3. Regenerates `BACKTEST.md` from the JSON history — latest metrics, acceptance gate status, and a history table for side-by-side comparison.
+4. Runs the regression gate, comparing the new result against the previous entry.
 
-```bash
-.venv/bin/python -m pytest -q
-```
+`BACKTEST.md` is the place to check current model performance. It is auto-generated and should never be edited manually.
 
-Run feature ablation:
+### Acceptance gate
 
-```bash
-.venv/bin/python scripts/run_ablation.py
-```
+Each run is checked against the provisional integration thresholds:
 
-Run the routine model-family comparison:
+- precision >= `0.55`
+- recall >= `0.15`
+- ROC-AUC >= `0.60`
 
-```bash
-.venv/bin/python scripts/compare_models.py
-```
+`BACKTEST.md` shows PASS/FAIL for each check.
 
-Export the latest prediction to the downstream contract:
+### Regression gate
 
-```bash
-.venv/bin/python scripts/export_latest_signal.py
-```
+After every run, key metrics (precision, recall, ROC-AUC, directional accuracy, F1) are compared against the previous history entry with a 5% relative tolerance. If any metric drops beyond tolerance, the gate prints `REGRESSION DETECTED` and exits with code 1.
 
-Or use `make test`, `make train`, `make backtest`, `make compare`, `make ablate`, and `make export-signal`.
+Run it standalone with `make regression-gate`. The verdict is also saved to `artifacts/regression_gate_verdict.json`.
+
+### History
+
+The history table in `BACKTEST.md` shows all recent runs side-by-side, making it easy to spot trends or regressions across iterations. The JSON source of truth is `artifacts/backtest_history.json`.
 
 ## Data, Feature, and Target Contracts
 
@@ -157,8 +146,10 @@ Artifact validation checks required fields and freshness before a downstream rep
 
 ## Artifacts
 
-Current generated artifacts live in `artifacts/`:
+Current generated artifacts live in `artifacts/` (plus `BACKTEST.md` at the repo root):
 
+- `backtest_history.json` (append-only result log, max 10 entries)
+- `regression_gate_verdict.json` (latest regression gate result)
 - `dataset_metadata.json`
 - `xgboost_direction.joblib`
 - `xgboost_direction.metadata.json`

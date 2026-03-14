@@ -13,7 +13,8 @@ A Bitcoin signal-generation and model-research repo. It does **not** place trade
 ```bash
 make test              # run full test suite (pytest)
 make train             # train default model (gen.py)
-make backtest          # walk-forward evaluation (backtest.py)
+make backtest          # walk-forward evaluation (backtest.py) — auto-saves history + BACKTEST.md
+make regression-gate   # compare latest backtest against previous (exit 1 on regression)
 make compare           # model family comparison
 make ablate            # feature ablation
 make export-signal     # export latest signal artifact
@@ -42,6 +43,8 @@ These files define how models are judged. Modifying them during feature/hyperpar
 - `evaluation/baselines.py` — baseline implementations
 - `evaluation/targets.py` — target construction
 - `evaluation/reporting.py` — metric computation
+- `evaluation/cost_model.py` — cost simulation
+- `evaluation/signal_rules.py` — signal decision rules
 - `data/loaders.py` — data loading
 - `data/pipeline.py` — dataset assembly
 - `data/validation.py` — data validation
@@ -57,12 +60,12 @@ If these need changes, propose them as a separate task with explicit justificati
 
 Any change to features, hyperparameters, targets, or model architecture:
 
-1. **Baseline first** — run `make backtest` and record current metrics before touching code.
+1. **Baseline first** — run `make backtest` and record current metrics before touching code. The result is saved to `artifacts/backtest_history.json` and `BACKTEST.md` automatically.
 2. **State hypothesis** — what you're changing, why, and what metric improvement you expect.
 3. **Implement** — make the minimal change.
-4. **Re-evaluate** — run `make backtest` again. Run `make test` to confirm no regressions.
-5. **Compare** — if any key metric degraded (precision, recall, ROC-AUC), revert unless explicitly accepted.
-6. **Never claim improvement without data** — show before/after numbers side-by-side.
+4. **Re-evaluate** — run `make backtest` again (auto-appends to history). Run `make test` to confirm no regressions.
+5. **Check regression gate** — the backtest run automatically compares against the previous entry. If `make regression-gate` exits 1, revert unless explicitly accepted. Check `BACKTEST.md` for the side-by-side history table.
+6. **Never claim improvement without data** — the history table in `BACKTEST.md` shows before/after numbers.
 
 ---
 
@@ -70,7 +73,8 @@ Any change to features, hyperparameters, targets, or model architecture:
 
 ```
 data/         # loaders, validation, dataset assembly
-evaluation/   # targets, baselines, walk-forward, ablation, comparison
+evaluation/   # targets, baselines, walk-forward, ablation, comparison,
+              #   cost simulation (cost_model.py), signal rules (signal_rules.py)
 features/     # deterministic feature engineering pipeline
 models/       # model interface (base.py), ARIMA, XGBoost
 signals/      # downstream signal export and validation
@@ -88,6 +92,7 @@ config.py     # all shared constants, feature lists, thresholds
 - **Single canonical feature pipeline** — `features/pipeline.py` is used by training, evaluation, and inference. Never duplicate feature logic.
 - **Config is the source of truth** — feature lists (`EXOG_COLUMNS`), cost parameters, walk-forward windows, and schema versions live in `config.py`.
 - **Artifacts go in `artifacts/`** — model files, predictions, metadata, signal exports. Never commit stale artifacts without updating `dataset_metadata.json`.
+- **Backtest history is append-only** — `artifacts/backtest_history.json` is the source of truth. `BACKTEST.md` is auto-generated from it — never edit manually. Every `make backtest` run appends to history and regenerates the markdown.
 - **Targets are trading-aligned** — the default target is cost-adjusted direction, not raw price. See `evaluation/targets.py`.
 
 ---

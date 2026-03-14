@@ -14,10 +14,12 @@ from config import (
     DEFAULT_TARGET_COLUMN,
 )
 from data.pipeline import build_dataset, write_dataset_metadata
+from evaluation.history import save_backtest_report
+from evaluation.regression_gate import print_verdict, run_regression_gate
 from evaluation.walk_forward import walk_forward_evaluate
 from features.pipeline import apply_feature_pipeline
-from portfolio import Portfolio
-from strategies import MultiFactorStrategy, Signal, Strategy
+from evaluation.cost_model import CostSimulator
+from evaluation.signal_rules import MultiFactorRule, Signal, SignalRule
 
 
 def apply_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -37,13 +39,13 @@ def generate_naive_predictions(df: pd.DataFrame) -> pd.DataFrame:
 
 def run_backtest(
     df: pd.DataFrame,
-    strategy: Strategy,
+    strategy: SignalRule,
     initial_capital: float = DEFAULT_INITIAL_CAPITAL,
     fee_pct: float = 0.001,
     slippage_pct: float = 0.0005,
-) -> tuple[Portfolio, list[float]]:
+) -> tuple[CostSimulator, list[float]]:
     """Evaluate how a downstream consumer would react to a prediction stream."""
-    portfolio = Portfolio(
+    simulator = CostSimulator(
         initial_capital=initial_capital,
         fee_pct=fee_pct,
         slippage_pct=slippage_pct,
@@ -53,17 +55,17 @@ def run_backtest(
 
     for _, row in df.iloc[1:].iterrows():
         current_price = row["close"]
-        signal = strategy.on_candle(row, portfolio)
-        if signal == Signal.BUY and not portfolio.has_position():
-            amount = strategy.get_position_size_usd(row, portfolio)
+        signal = strategy.on_candle(row, simulator)
+        if signal == Signal.BUY and not simulator.has_position():
+            amount = strategy.get_position_size_usd(row, simulator)
             if amount > 0:
-                portfolio.execute_buy(current_price, amount, timestamp=row.name)
-        elif signal == Signal.SELL and portfolio.has_position():
-            portfolio.execute_sell(current_price, timestamp=row.name)
-        portfolio.record_equity(current_price)
+                simulator.simulate_entry(current_price, amount, timestamp=row.name)
+        elif signal == Signal.SELL and simulator.has_position():
+            simulator.simulate_exit(current_price, timestamp=row.name)
+        simulator.record_equity(current_price)
         buy_and_hold_curve.append(buy_and_hold_btc * current_price)
 
-    return portfolio, buy_and_hold_curve
+    return simulator, buy_and_hold_curve
 
 
 def main() -> None:
@@ -80,6 +82,18 @@ def main() -> None:
         target_column=DEFAULT_TARGET_COLUMN,
         output_dir=artifacts_dir,
     )
+
+    # Append to history and regenerate BACKTEST.md.
+    save_backtest_report(
+        result,
+        dataset_rows=metadata.row_count,
+        dataset_start=metadata.start,
+        dataset_end=metadata.end,
+    )
+
+    # Run regression gate against previous result.
+    verdict = run_regression_gate()
+    print_verdict(verdict)
 
     summary = {
         "dataset_rows": metadata.row_count,
