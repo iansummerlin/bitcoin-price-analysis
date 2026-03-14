@@ -8,22 +8,16 @@ The canonical execution plan and progress tracker live in [ROADMAP.md](/home/ixn
 
 ## Current Judgment
 
-As of March 13, 2026, this repo is materially more credible as a research system than it was, but it is still `research-only`, not a justified trading-strategy dependency.
+As of March 14, 2026, this repo is `research-only`, not a justified trading-strategy dependency.
 
-The latest verified walk-forward result in this repo used the local historical dataset ending on July 17, 2025 and evaluated the cost-adjusted directional classifier over the most recent 365 days in that dataset. The current `xgboost_direction` model beat naive directional baselines on headline accuracy and ROC-AUC, but its actionable precision/recall remain weak:
+The dataset was refreshed on March 14, 2026 (price data through March 13, 2026; sentiment through March 14, 2026). The latest walk-forward evaluation on fresh data:
 
-- directional accuracy: `0.829`
-- precision on cost-adjusted up moves: `0.215`
-- recall on cost-adjusted up moves: `0.030`
-- ROC-AUC: `0.634`
+- directional accuracy: `0.721`
+- precision on cost-adjusted up moves: `0.169`
+- recall on cost-adjusted up moves: `0.261`
+- ROC-AUC: `0.641`
 
-That is not good enough to claim a robust deployable signal. The repo now fails honestly and exports artifacts cleanly, but the present evidence does not justify downstream strategy integration.
-
-The routine family-comparison artifact in `artifacts/model_comparison.json` is stricter because it uses a faster repeated-check comparison slice and explicit acceptance thresholds. On that comparison run, `xgboost_direction` remained the best family, but still missed the integration bar:
-
-- precision: `0.097`
-- recall: `0.051`
-- ROC-AUC: `0.596`
+Recall now clears the threshold (>= 0.15) and ROC-AUC is above threshold (>= 0.60), but precision remains far below (needs >= 0.55). The model catches real moves but cannot distinguish them from noise with the current feature set. This confirms the next priority is expanding the data universe (on-chain, cross-asset, microstructure) — see Phase 12 in `ROADMAP.md`.
 
 Current provisional integration thresholds:
 
@@ -178,10 +172,25 @@ Historical 2025 outputs such as old plots and the legacy ARIMA pickle were remov
 
 ## Limitations
 
-- The local historical dataset currently ends on July 17, 2025. Results are structurally stale until fresher data is ingested and re-evaluated.
+- The dataset was last refreshed on March 14, 2026 (price through March 13, sentiment through March 14).
 - The current best model does not yet show strong enough cost-aware precision/recall to justify integration into a trading strategy repo.
+- The current feature set is derived almost entirely from price/volume data and a single sentiment index. These are lagging, widely available indicators that the market has already priced in. Reaching the integration bar almost certainly requires alternative data sources (on-chain metrics, cross-asset signals, market microstructure). See Phase 12 in `ROADMAP.md`.
 - `scripts/compare_models.py` exists for reproducible family comparison, but ARIMA evaluation is still materially slower than the tree-based path and should be treated as research tooling, not a fast daily check.
+
+## Autonomous Experiment Loop — Limitations
+
+This repo uses (or will use) an autonomous AI experiment loop inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) to systematically search the feature/model/hyperparameter space. See Phase 13 in `ROADMAP.md` for full details. The following limitations apply:
+
+**Overfitting risk.** Financial data is far noisier than LLM training data. A metric improvement on walk-forward windows may not generalize. The loop mitigates this with: a held-out validation set never seen during optimization, regime diversity checks (improvements must hold across multiple market conditions), and minimum improvement thresholds to filter noise.
+
+**The loop cannot fix bad inputs.** If the feature set doesn't contain genuine predictive signal, no amount of automated experimentation will find edge. The loop optimizes the search space it's given — it doesn't create new data sources. Phase 12 (expand data universe) must come first.
+
+**Metric gaming.** An agent optimizing a single composite metric over many iterations will find configurations that score well on that metric but may not represent robust trading signals. The held-out validation set is the final check against this, but it can only be used once.
+
+**Compute cost.** Each experiment runs a full walk-forward evaluation (~10-15 minutes). Running 100 experiments takes ~20 hours. This is a meaningful compute commitment.
+
+**Not a replacement for domain reasoning.** The loop finds what works empirically but doesn't explain why. A feature that improves metrics could be capturing a real market dynamic or could be a coincidence in the evaluation window. Human review of the surviving experiments is still necessary before trusting the results for live trading.
 
 ## Decision
 
-This repo is now a useful research and signal-export foundation, but not yet a genuinely useful production signal provider for a trading strategy repo. It should remain research-only until it shows materially better cost-aware edge on fresher data.
+This repo is a useful research and signal-export foundation, but not yet a genuinely useful production signal provider. Fresh data (March 2026) confirmed that recall is achievable but precision is the bottleneck — the model needs richer data sources to filter noise from signal. It should remain research-only until Phase 12 (data universe expansion) and Phase 13 (experiment loop) have been completed and evaluated.

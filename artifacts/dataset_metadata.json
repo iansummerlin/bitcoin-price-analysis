@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-03-13T13:49:28.835267+00:00",
+  "generated_at": "2026-03-14T11:43:22.106763+00:00",
   "timeframe": "1h",
   "timezone": "UTC",
   "market_source": "gemini_btcusd_spot_1h",
   "data_schema_version": "2026-03-13",
   "feature_schema_version": "2026-03-13",
-  "row_count": 85566,
+  "row_count": 91302,
   "start": "2015-10-13T14:00:00+00:00",
-  "end": "2025-07-17T22:00:00+00:00",
+  "end": "2026-03-13T22:00:00+00:00",
   "feature_columns": [
     "close_lag_1",
     "close_lag_6",

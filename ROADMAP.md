@@ -5,11 +5,13 @@
 - Owner intent: turn this repository into a reliable **Bitcoin signal-generation and model-research repo** for a separate trading strategy/execution repository.
 - Audience: a fresh engineering agent with zero prior context.
 - Primary constraint: this repo should prove whether it can produce a usable predictive signal. It should not become an execution bot.
-- Current date context: this roadmap was written on March 13, 2026. Any model artifacts or results from 2025 are stale until revalidated.
+- Current date context: this roadmap was last updated on March 14, 2026. Data was refreshed through March 13, 2026.
 
 ## Progress Tracker
 
 Use these checkboxes to track progress directly in this file.
+
+### Foundation (complete)
 
 - [x] Remove direct execution pathways from the repository.
 - [x] Remove obvious standalone-trading legacy surface (`trade.py`, `trade.html`, redundant docs/specs).
@@ -24,6 +26,12 @@ Use these checkboxes to track progress directly in this file.
 - [x] Finish Phase 8 artifact reliability and freshness.
 - [x] Finish Phase 9 documentation quality hardening.
 - [x] Finish Phase 10 testing and reproducibility hardening.
+
+### Signal quality (current priority)
+
+- [x] Finish Phase 11 data refresh.
+- [ ] Finish Phase 12 expand data universe and model families.
+- [ ] Finish Phase 13 autonomous experiment loop.
 - [ ] Pass all decision gates and declare repo ready for downstream integration review.
 
 ### Current Status After Execution
@@ -32,8 +40,19 @@ Use these checkboxes to track progress directly in this file.
 - `gen.py`, `backtest.py`, and `collect.py` are now thin entrypoints on top of shared pipelines.
 - The repository now builds a deterministic dataset, evaluates models with strict walk-forward splits, exports self-describing signal artifacts, and ships an A-tier test suite.
 - The current evidence still does **not** justify downstream trading-repo integration.
-- Latest verified walk-forward result on March 13, 2026 used local data through **July 17, 2025** and found `xgboost_direction` directional accuracy `0.829`, precision `0.215`, recall `0.030`, ROC-AUC `0.634` on the cost-adjusted target over the default recent evaluation slice. That is not strong enough to call the signal genuinely useful yet.
-- Latest routine model comparison artifact on March 13, 2026 found `xgboost_direction` remained the best model family, but only at precision `0.097`, recall `0.051`, ROC-AUC `0.596` on the comparison slice. That fails the repo’s provisional integration bar.
+- Data was refreshed on March 14, 2026. The dataset now covers **2015-10-13 to 2026-03-13** (91,302 rows after feature pipeline).
+- Latest verified walk-forward result on March 14, 2026 used the refreshed dataset and found `xgboost_direction` directional accuracy `0.721`, precision `0.169`, recall `0.261`, ROC-AUC `0.641` on the cost-adjusted target over the default recent evaluation slice. Recall now clears the threshold (>= 0.15) but precision remains far below (needs >= 0.55). The model catches real moves but can’t distinguish them from noise.
+- Latest routine model comparison on March 14, 2026 confirmed `xgboost_direction` remains the best model family but still fails the integration bar.
+
+### What blocks progress now
+
+The foundation infrastructure (Phases 0–10) is solid. The three blockers are:
+
+1. ~~**Stale data**~~ — resolved March 14, 2026. Dataset now extends through March 13, 2026.
+2. **Narrow data universe** — the model only sees price-derived technical indicators and a single sentiment index. These are lagging, widely available, and largely priced in. The market has this information already. Fresh data confirmed this: recall improved to 0.261 (above threshold) but precision dropped to 0.169 (far below 0.55). The model detects moves but can't filter noise from signal with current features. Reaching the integration bar almost certainly requires data sources the market hasn't fully absorbed: on-chain metrics, cross-asset signals, order flow / microstructure data.
+3. **Unexplored search space** — even with better data, the combination of features, hyperparameters, target thresholds, and model architectures is too large for manual exploration.
+
+Phase 11 (data refresh) is complete. Phase 12 expands what the model can see. Phase 13 systematically searches the expanded space.
 
 ---
 
@@ -47,7 +66,7 @@ These facts are important for a fresh agent and should be assumed true unless th
 - `collect.py` is being retained only because live signal analytics may be useful.
 - If `collect.py` remains, it should operate as a **backfill-first live analytics pipeline**, not a "wait for lag windows to fill naturally" process.
 - Training and live/inference data alignment now goes through shared schema and feature pipeline code, though live analytics should still be treated as monitoring until fresh data is revalidated.
-- Historical artifacts from 2025 are stale until revalidated.
+- Data was refreshed on March 14, 2026 (price through March 13, sentiment through March 14). Historical artifacts prior to that date are stale.
 - The roadmap is the canonical planning and progress-tracking document for this repository.
 
 ---
@@ -58,15 +77,15 @@ If you are a fresh agent with no other context, start in this order:
 
 1. Read this roadmap fully once.
 2. Read `README.md` and confirm it matches the roadmap.
-3. Complete any remaining unchecked items in Phase 0.
-4. Start Phase 1 by deciding and documenting the retained role of `collect.py`.
-5. If `collect.py` stays, redesign it around historical backfill plus live continuation so the system can produce immediate live analytics without waiting for lag windows to fill.
-6. Do not move to model optimization until the Phase 1 data pipeline and schema alignment work is complete.
+3. Check the Progress Tracker above. Phases 0–10 are complete (except one remaining Phase 5 item). The current work is Phases 11, 12, and 13.
+4. Phase 11 (data refresh) is complete. Data now extends through March 13, 2026.
+5. Start with **Phase 12: Expand Data Universe & Model Families**. This is the biggest remaining phase and the one most likely to determine whether the repo succeeds or fails.
+6. After Phase 12 delivers new data sources and model families integrated into the pipeline, move to **Phase 13: Autonomous Experiment Loop** to systematically search the expanded space.
+7. The remaining Phase 5 item (remove weak features) will be handled automatically by the experiment loop in Phase 13.
 
 If unsure what the next practical task is, the default next task is:
 
-- finish Phase 0 cleanup,
-- then refactor the data pipeline and `collect.py` under Phase 1.
+- **Phase 12** — integrate on-chain data as the first new data family, following the implementation order in the Phase 12 checklist.
 
 ---
 
@@ -110,26 +129,28 @@ Those concerns belong in the downstream trading repo.
 
 ## Current Repo Assessment
 
-### Useful pieces already present
+### What works (Phases 0–10 complete)
 
-- Historical data download and loading.
-- Modular feature engineering.
-- ARIMA training path.
-- Alternative model scaffolding for boosted-tree regression/classification.
-- Portfolio/backtest framework.
-- A meaningful test suite around features, portfolio logic, strategies, and metrics.
+- Deterministic data pipeline with schema validation.
+- Walk-forward evaluation with strict no-lookahead splits.
+- 6 naive baselines for honest comparison.
+- Cost-adjusted trading-aligned targets.
+- Model comparison and ablation reporting.
+- Versioned signal export contract.
+- Comprehensive test suite.
+- A-tier documentation.
 
-### Critical shortcomings
+### What doesn't work yet
 
-- The current backtest does **not** test the trained model; it uses naive momentum predictions.
-- Training and inference data sources are inconsistent.
-- The repo still contains "trading bot" framing and execution placeholders that do not match the intended role.
-- Current reported model metrics are not sufficient to justify downstream usage.
-- Some code and docs still imply production readiness that the repo does not have.
+- **Data is stale** — dataset ends July 2025 (Phase 11 fixes this).
+- **Feature universe is too narrow** — only price-derived technicals and one sentiment index. The market already has this information (Phase 12 fixes this).
+- **Model roster is too narrow** — only XGBoost and ARIMA. Need LightGBM, CatBoost, ensemble methods (Phase 12 fixes this).
+- **Search space is unexplored** — no systematic exploration of the feature/model/hyperparameter space (Phase 13 fixes this).
+- **Model metrics fail the integration bar** — precision 0.215, recall 0.030 vs thresholds of 0.55, 0.15.
 
 ### Current bottom line
 
-This repo is a **promising research base** but **not yet a trustworthy model provider**.
+This repo has **solid research infrastructure** but is trying to find signal in data that doesn't contain enough of it. The infrastructure is not the problem — the inputs are.
 
 ---
 
@@ -364,14 +385,18 @@ This is the target shape, not necessarily the immediate next commit:
 
 Work through phases in order. Do not skip ahead to more advanced model work until earlier gates are met.
 
-1. Repo framing and workflow cleanup.
-2. Deterministic data pipeline.
-3. Baselines and honest evaluation harness.
-4. Real walk-forward model-backed backtesting/evaluation.
-5. Better targets and features.
-6. Model comparison.
-7. Downstream signal contract.
-8. Reliability, testing, and artifact hardening.
+1. ~~Repo framing and workflow cleanup.~~ (done)
+2. ~~Deterministic data pipeline.~~ (done)
+3. ~~Baselines and honest evaluation harness.~~ (done)
+4. ~~Real walk-forward model-backed backtesting/evaluation.~~ (done)
+5. ~~Better targets and features.~~ (mostly done — final cleanup folded into Phase 13)
+6. ~~Model comparison.~~ (done)
+7. ~~Downstream signal contract.~~ (done)
+8. ~~Reliability, testing, and artifact hardening.~~ (done)
+9. ~~Data refresh.~~ (done)
+10. **Expand data universe and model families.** ← you are here
+11. **Autonomous experiment loop.**
+12. Final gate re-evaluation and integration decision.
 
 ---
 
@@ -963,23 +988,353 @@ A roadmap is not actionable if the documented workflow cannot be reproduced in a
 
 ---
 
+## Phase 11: Data Refresh
+
+### Checklist
+
+- [x] Identify and document current data sources and their coverage gaps (dataset ends July 17, 2025).
+- [x] Download fresh Gemini BTCUSD spot 1h candle data through the current date.
+- [x] Validate the fresh data passes all existing schema and OHLCV sanity checks.
+- [x] Merge the fresh data into the canonical `BTCUSD_1H.csv` without duplicates or gaps.
+- [x] Download fresh Fear & Greed sentiment data through the current date.
+- [x] Merge fresh sentiment into `BTC_sentiment.csv`.
+- [x] Run `build_dataset()` and confirm the full pipeline completes without errors.
+- [x] Run the existing test suite and confirm all tests pass on the extended dataset.
+- [x] Run `make backtest` on the fresh data and record new baseline metrics.
+- [x] Run `make compare` on the fresh data and record new model comparison metrics.
+- [x] Update `artifacts/dataset_metadata.json` with new date range.
+- [x] Update this roadmap and `README.md` with the new data end date and fresh metric baselines.
+
+### Objective
+
+Get the dataset current so that all subsequent research produces trustworthy, non-stale results.
+
+### Why this phase exists
+
+The dataset ends July 17, 2025. Every model result since then is structurally suspect. No feature engineering, hyperparameter tuning, or experiment loop can produce reliable conclusions on 8-month-old data. This is the single highest-priority blocker.
+
+### Concrete tasks
+
+- Determine whether CryptoDataDownload still provides the Gemini BTCUSD 1h dataset, or whether an alternative source is needed.
+- If the source has changed, update `data/loaders.py` to handle the new format while preserving schema compatibility.
+- Download, validate, and merge fresh price data.
+- Download and merge fresh sentiment data.
+- Re-run the full evaluation pipeline on the extended dataset.
+- Record the fresh baseline metrics — these become the new reference point for Phases 12 and 13.
+- Do **not** retune any model parameters in this phase. The goal is to establish a clean, current baseline before experimentation begins.
+
+### Exit criteria
+
+- The dataset extends to within 7 days of the current date.
+- All existing tests pass on the extended dataset.
+- Fresh walk-forward and model comparison metrics are recorded and documented.
+- No model parameters were changed — only data was updated.
+
+---
+
+## Phase 12: Expand Data Universe & Model Families
+
+### Checklist
+
+#### On-chain data integration
+
+- [ ] Research available on-chain data sources and their API access (Glassnode, CryptoQuant, Coin Metrics, free alternatives).
+- [ ] Select a primary on-chain data provider based on: cost, API reliability, historical depth, and feature coverage.
+- [ ] Build a canonical on-chain data loader in `data/loaders.py` (or a new `data/onchain.py` module).
+- [ ] Integrate on-chain features into the dataset pipeline with proper timestamp alignment and forward-fill policy.
+- [ ] Add the following on-chain feature families to `features/`:
+  - [ ] Exchange flow features: net exchange inflows/outflows, exchange reserve changes.
+  - [ ] Whale/large holder activity: large transaction count, wallet concentration changes.
+  - [ ] Miner metrics: miner revenue, hash rate changes, miner outflows.
+  - [ ] Valuation metrics: MVRV ratio, NVT signal, realized price vs market price.
+  - [ ] Network activity: active addresses, transaction count, new address momentum.
+- [ ] Add schema validation for on-chain data (null handling, staleness, expected ranges).
+- [ ] Add tests for on-chain feature computation and pipeline integration.
+
+#### Cross-asset data integration
+
+- [ ] Identify and document cross-asset data sources (Yahoo Finance, FRED, exchange APIs).
+- [ ] Build a canonical cross-asset data loader.
+- [ ] Add the following cross-asset feature families to `features/`:
+  - [ ] USD strength: DXY index or USD basket proxy.
+  - [ ] Equity correlation: S&P 500 returns, rolling BTC/SPX correlation.
+  - [ ] Risk appetite: VIX level and changes, gold/BTC ratio.
+  - [ ] Crypto relative strength: ETH/BTC ratio, BTC dominance.
+- [ ] Handle timezone and market-hours alignment (traditional markets close on weekends; crypto doesn't).
+- [ ] Add schema validation and tests for cross-asset features.
+
+#### Market microstructure data integration
+
+- [ ] Identify and document microstructure data sources (Binance futures API, Coinglass, exchange APIs).
+- [ ] Build a canonical microstructure data loader.
+- [ ] Add the following microstructure feature families to `features/`:
+  - [ ] Derivatives signals: perpetual funding rate, open interest changes, long/short ratio.
+  - [ ] Liquidation data: liquidation volume, cascading liquidation detection.
+  - [ ] Order book features: bid-ask spread, order book depth imbalance (if available at 1h resolution).
+- [ ] Add schema validation and tests for microstructure features.
+
+#### Multi-timeframe target exploration
+
+- [ ] Add 4-hour forward target (direction and cost-adjusted direction).
+- [ ] Add daily (24h) forward target (direction and cost-adjusted direction).
+- [ ] Adjust cost thresholds per timeframe (longer horizons tolerate higher costs).
+- [ ] Run walk-forward evaluation on each timeframe and compare which horizon produces the strongest signal.
+- [ ] Document the best-performing timeframe and update the default target if warranted.
+
+#### Alternative model families
+
+- [ ] Add LightGBM classifier implementing `BaseModel` interface.
+- [ ] Add CatBoost classifier implementing `BaseModel` interface.
+- [ ] Add at least one temporal model (LSTM or lightweight transformer) implementing `BaseModel` interface, if data volume justifies it.
+- [ ] Add an ensemble method that combines predictions from multiple model families.
+- [ ] Run `make compare` with the expanded model roster and record results.
+- [ ] Update `requirements.txt` with new dependencies.
+
+#### Integration and validation
+
+- [ ] Confirm all new data sources merge cleanly into `build_dataset()` without breaking existing features.
+- [ ] Confirm all existing tests still pass after the expanded feature set is integrated.
+- [ ] Run a full walk-forward evaluation with the expanded feature set and record metrics.
+- [ ] Compare the expanded-feature results against the Phase 11 baseline to measure the impact of new data.
+- [ ] Add ablation reporting for each new data family (on-chain, cross-asset, microstructure) so the experiment loop knows which families carry signal.
+- [ ] Update `config.py` with the expanded `EXOG_COLUMNS` list and any new configuration.
+- [ ] Update `README.md` source policy section with new data sources.
+- [ ] Update this roadmap with results.
+
+### Objective
+
+Give the model access to data sources that carry genuine predictive signal — information the market hasn't fully priced in — rather than trying to extract edge from price-derived indicators the entire market already sees.
+
+### Why this phase exists
+
+The current model uses 23 features derived almost entirely from price and volume data (lagged closes, returns, RSI, ATR, moving averages) plus a single sentiment index. These are lagging indicators that every market participant has access to. Trying to predict BTC direction from RSI and moving averages is like trying to predict tomorrow's weather from today's temperature alone — technically correlated, but the market has already priced that correlation in.
+
+The integration bar requires precision >= 0.55 and recall >= 0.15. Getting there from 0.215 / 0.030 is not a tuning problem — it's a **data problem**. The model needs to see things the market hasn't fully digested:
+
+- **On-chain data** provides supply/demand signals invisible in price (exchange outflows signal accumulation before price moves).
+- **Cross-asset data** captures macro regime shifts that drive BTC (DXY strength, risk-on/risk-off transitions).
+- **Microstructure data** captures positioning and leverage that create short-term predictable dynamics (funding rate extremes, liquidation cascades).
+- **Multi-timeframe targets** may reveal that 1-hour is simply the wrong prediction horizon — daily direction after costs may be far more predictable.
+
+Without this phase, the experiment loop (Phase 13) would be searching a narrow, low-signal space. This phase expands the space so the loop has something worth finding.
+
+### Critical design constraints
+
+1. **Every new data source must go through the existing validation pipeline.** No raw API responses flowing directly into features. Schema validation, null handling, and staleness checks apply to all new data equally.
+
+2. **New features must be deterministic and reproducible.** The same input data must produce the same features every time. No API calls during feature computation — data is downloaded and cached first, then features are computed from the cache.
+
+3. **Lookback periods must be documented and respected.** On-chain data may have different availability frequencies (daily vs hourly). The pipeline must handle this cleanly via forward-fill with explicit documentation of the fill policy.
+
+4. **Paid API dependencies must be documented.** If a data source requires a paid API key, document the cost, the free tier limits, and what features are lost without it. The repo should degrade gracefully to free data sources.
+
+5. **Each data family is added and validated independently before combining.** Do not add on-chain + cross-asset + microstructure all at once. Add one family, validate it works, measure its impact, then add the next. This prevents debugging nightmares and lets ablation isolate which families carry signal.
+
+### Suggested implementation order within this phase
+
+1. **On-chain data first** — highest expected signal-to-noise ratio, most unique information relative to price.
+2. **Cross-asset data second** — captures macro context, relatively easy to source.
+3. **Microstructure data third** — highest noise, most complex to integrate, but captures short-term dynamics.
+4. **Multi-timeframe targets** — can be done in parallel with any data work.
+5. **Alternative models last** — better to have rich features with one model than poor features with five models.
+
+### Suggested file targets
+
+- `data/onchain.py` (new — on-chain data loader)
+- `data/crossasset.py` (new — cross-asset data loader)
+- `data/microstructure.py` (new — microstructure data loader)
+- `data/loaders.py` (extend with new source registration)
+- `data/pipeline.py` (extend `build_dataset()` to merge new sources)
+- `features/onchain.py` (new — on-chain feature computation)
+- `features/crossasset.py` (new — cross-asset feature computation)
+- `features/microstructure.py` (new — microstructure feature computation)
+- `features/pipeline.py` (extend to include new feature families)
+- `models/lightgbm_model.py` (new)
+- `models/catboost_model.py` (new)
+- `models/temporal_model.py` (new — LSTM/transformer, optional)
+- `models/ensemble_model.py` (new)
+- `config.py` (expanded feature lists, new data source configs)
+- `tests/` (new tests for each data family and model)
+
+### Exit criteria
+
+- At least two new data families (on-chain + one other) are integrated into the pipeline and producing features.
+- At least one alternative model family (LightGBM or CatBoost) is implemented and passing the model comparison harness.
+- Ablation results show at least one new data family contributes measurable out-of-sample improvement over the Phase 11 baseline.
+- All existing tests still pass.
+- The expanded feature set and model roster are documented in README.md.
+- The repo is ready for the Phase 13 experiment loop to search the expanded space.
+
+---
+
+## Phase 13: Autonomous Experiment Loop
+
+### Checklist
+
+#### Infrastructure
+
+- [ ] Create `program.md` with research directives, scope boundaries, and safety rails.
+- [ ] Create `scripts/experiment_loop.py` — the autonomous runner script.
+- [ ] Define the single composite metric used to judge experiments (e.g., cost-adjusted F1, or precision × recall product).
+- [ ] Create `results.tsv` format for experiment logging (commit hash, metric, status, description).
+- [ ] Designate immutable files the agent must never modify (evaluation harness, data loaders, test suite).
+- [ ] Designate mutable files the agent may modify (features, model hyperparameters, target thresholds, config).
+- [ ] Reserve a held-out final validation set that the experiment loop never sees during optimization.
+- [ ] Add a `make experiment` target to the Makefile.
+
+#### Safety rails
+
+- [ ] Implement minimum improvement threshold — discard changes below noise floor (e.g., < 0.005 metric improvement).
+- [ ] Implement maximum complexity budget — reject changes that add more than N lines without proportional metric gain.
+- [ ] Implement regime diversity check — require the improvement to hold across at least 2 distinct walk-forward windows, not just the aggregate.
+- [ ] Implement rollback on test failure — if `pytest` fails after a change, revert automatically.
+- [ ] Implement experiment budget cap — stop after N experiments or M hours to prevent runaway compute.
+
+#### Experiment scope
+
+- [ ] Feature engineering: add, remove, or modify features in `features/pipeline.py` and `config.py`.
+- [ ] Feature selection: enable/disable feature families from Phase 12 (on-chain, cross-asset, microstructure).
+- [ ] Hyperparameter tuning: modify model parameters across all model families (XGBoost, LightGBM, CatBoost, ensemble).
+- [ ] Target threshold tuning: adjust cost buffer, actionable move threshold, prediction timeframe in `config.py`.
+- [ ] Probability threshold tuning: adjust classification decision boundary.
+- [ ] Model selection: switch between or combine Phase 12 model families.
+- [ ] New model architectures: add new model classes in `models/` that conform to the `BaseModel` interface.
+
+#### Validation
+
+- [ ] Run the experiment loop end-to-end on at least one full cycle and confirm keep/discard logic works.
+- [ ] Confirm `results.tsv` accurately logs all experiments with correct metrics.
+- [ ] Confirm the held-out validation set was never used during the experiment loop.
+- [ ] Evaluate the best surviving configuration on the held-out set and record final metrics.
+- [ ] If final metrics clear the integration bar, update the progress tracker and gate results.
+
+### Objective
+
+Systematically explore the feature/hyperparameter/target search space using an autonomous AI experiment loop, inspired by Karpathy's autoresearch pattern, layered on top of the existing walk-forward evaluation infrastructure.
+
+### Why this phase exists
+
+After Phase 12 expands the data universe and model roster, the search space is large: dozens of features across multiple data families × hyperparameter grids × target thresholds × multiple model architectures. That is too large for manual exploration. An autonomous loop can run ~12 experiments/hour, covering overnight what would take weeks of manual iteration.
+
+### How it works
+
+The experiment loop follows the autoresearch pattern adapted for financial signal research:
+
+```
+1. Agent reads current state (code, metrics, experiment history)
+2. Agent proposes a single, minimal change to a mutable file
+3. Agent commits the change to a git branch
+4. Agent runs `make backtest` and extracts the composite metric
+5. Agent runs `pytest -q` to confirm no tests broke
+6. If metric improved AND tests pass AND regime check passes:
+   → keep the commit, log as "keep" in results.tsv
+7. If metric did not improve OR tests failed:
+   → git reset, log as "discard" in results.tsv
+8. Repeat from step 1
+```
+
+### Critical design constraints
+
+These exist because financial data is fundamentally different from LLM training data:
+
+1. **Held-out validation set is sacred.** Split the most recent N months of data as a final validation set. The experiment loop trains and evaluates on everything before that. The held-out set is only used once, at the end, to check if the best configuration generalizes. This prevents the loop from overfitting to the walk-forward evaluation windows.
+
+2. **Regime diversity is mandatory.** A change that improves the aggregate metric but only works in one market regime (e.g., bull run) is not a real improvement. The regime check ensures improvements hold across at least 2 distinct walk-forward windows.
+
+3. **Complexity has a cost.** Unlike LLM training where a 0.001 improvement is always real, a 0.005 improvement in crypto signal metrics could be noise. The minimum improvement threshold and complexity budget prevent the loop from accumulating fragile micro-optimizations.
+
+4. **The evaluation harness is never modified.** The loop can change what goes into the model (features, parameters) but never how the model is judged (walk-forward splits, cost model, baselines, metrics). This is the key invariant that makes the results trustworthy.
+
+### Scope boundaries
+
+**The agent MAY modify:**
+- `features/pipeline.py` — add, remove, or modify feature computation
+- `features/price.py`, `features/technical.py`, `features/volatility.py` — individual feature modules
+- `features/onchain.py`, `features/crossasset.py`, `features/microstructure.py` — Phase 12 feature modules
+- `config.py` — feature lists (`EXOG_COLUMNS`), cost thresholds, model hyperparameters, target timeframe
+- `models/xgboost_model.py` — hyperparameters, model architecture
+- `models/lightgbm_model.py`, `models/catboost_model.py`, `models/ensemble_model.py` — Phase 12 model families
+- `models/` — new model files that implement `BaseModel`
+
+**The agent must NEVER modify:**
+- `evaluation/walk_forward.py` — the scoring harness
+- `evaluation/baselines.py` — baseline implementations
+- `evaluation/targets.py` — target construction
+- `evaluation/reporting.py` — metric computation
+- `data/loaders.py` — data loading
+- `data/pipeline.py` — dataset assembly
+- `data/validation.py` — data validation
+- `tests/` — test suite
+- `backtest.py` — evaluation entrypoint
+- `signals/` — signal export contract
+
+### `program.md` template
+
+The `program.md` file instructs the AI agent running the experiment loop. It should contain:
+
+```markdown
+# Bitcoin Signal Research Program
+
+## Your role
+You are an autonomous research agent optimizing Bitcoin price signal models.
+You propose changes, run experiments, and keep or discard based on results.
+
+## Metric
+Your optimization target is: [composite metric, e.g., cost_adj_precision * cost_adj_recall].
+Extract it from the walk-forward summary JSON after each run.
+
+## Budget
+- Each experiment must complete in under 15 minutes (backtest + tests).
+- Stop after 100 experiments or 12 hours, whichever comes first.
+
+## Scope
+You may modify: features/*, config.py (EXOG_COLUMNS, thresholds, hyperparams), models/*.
+You must NOT modify: evaluation/*, data/*, tests/*, backtest.py, signals/*.
+
+## Rules
+1. One change per experiment. Keep changes minimal and targeted.
+2. Always run pytest after backtest. If tests fail, revert immediately.
+3. A change must improve the metric by at least 0.005 to be kept.
+4. If a change adds more than 20 lines of code, the improvement must be proportionally larger.
+5. Log every experiment to results.tsv with: commit hash, metric value, status, description.
+6. Never touch the held-out validation set. It is only used at the end.
+7. Prefer removing weak features over adding new ones when both options score similarly.
+8. Read results.tsv before proposing a new experiment — do not repeat failed approaches.
+```
+
+### Suggested file targets
+
+- `program.md` (new — research directives for the AI agent)
+- `scripts/experiment_loop.py` (new — autonomous runner)
+- `results.tsv` (new — experiment log, git-tracked)
+- `Makefile` (add `experiment` target)
+- `config.py` (add held-out validation split config)
+
+### Exit criteria
+
+- The experiment loop has run at least 50 experiments with proper logging.
+- The best surviving configuration has been evaluated on the held-out validation set.
+- If the held-out metrics clear the integration bar: declare the repo ready for Gate 5 re-evaluation.
+- If the held-out metrics do not clear the bar after sustained experimentation: document the conclusion honestly and consider whether the signal hypothesis should be abandoned.
+
+---
+
 ## Prioritized Task List
 
 If a fresh agent needs a concrete execution sequence, follow this order:
 
-1. Update `README.md` so the repo is described as a signal/model repo, not a trading bot.
-2. Remove any remaining files, docs, generated artifacts, logs, or UI remnants that do not support the signal/model mission.
-3. Refactor data loading so `gen.py` and evaluation use one canonical data pipeline with no manual cleanup.
-4. Unify training and inference schema assumptions in shared config/utilities.
-5. Add honest baselines and make them first-class citizens in evaluation.
-6. Refactor `backtest.py` so it evaluates real model predictions, not only naive momentum.
-7. Add walk-forward evaluation that trains on past windows and predicts unseen future windows.
-8. Move modeling focus toward returns/direction instead of raw next close.
-9. Add cost-aware signal metrics and define an actionable signal contract.
-10. Harden artifact metadata, validation, and staleness checks.
-11. Bring documentation to A-tier quality and keep it aligned with the real codebase.
-12. Expand tests to cover end-to-end evaluation and downstream compatibility.
-13. Only after all of the above, assess whether this repo should be integrated into the trading strategy repo.
+### Already complete (Phases 0–10)
+
+1. ~~Repo framing, cleanup, data pipeline, baselines, walk-forward validation, targets, model comparison, signal contract, artifact hardening, documentation, and testing.~~
+
+### Current priority sequence
+
+2. **Refresh the dataset** (Phase 11). Download fresh price and sentiment data through the current date. Re-run all evaluations. Record new baseline metrics. Do not change any model parameters.
+3. **Expand the data universe** (Phase 12). Integrate on-chain data first, then cross-asset, then microstructure. Add each family independently, validate, measure impact. Add alternative model families (LightGBM, CatBoost). Explore multi-timeframe targets.
+4. **Build the experiment loop infrastructure** (Phase 13). Create `program.md`, `scripts/experiment_loop.py`, held-out validation split, and `results.tsv` format. Add safety rails (minimum improvement threshold, regime diversity check, complexity budget, test-failure rollback).
+5. **Run the experiment loop** (Phase 13). Let the autonomous agent explore the expanded feature/model/target space. Monitor `results.tsv` for progress.
+6. **Evaluate on held-out data** (Phase 13). After the loop completes, evaluate the best surviving configuration on the held-out validation set exactly once.
+7. **Final gate decision.** If held-out metrics clear the integration bar, declare the repo ready for downstream integration review. If not, document the conclusion honestly.
 
 ---
 
@@ -1045,14 +1400,44 @@ If no:
 - keep this repo as research-only, or
 - stop using it as a dependency.
 
-Current gate result on March 13, 2026:
+### Gate 6: After data universe expansion
+
+Question: Did expanding the data universe produce at least one new feature family that measurably improves out-of-sample metrics over the Phase 11 baseline?
+
+If yes:
+
+- proceed to Phase 13 (experiment loop) to systematically optimize the expanded space.
+
+If no:
+
+- re-evaluate whether the data sources chosen are the right ones,
+- consider alternative sources before running the experiment loop on a still-narrow feature set.
+
+### Gate 7: After experiment loop
+
+Question: Did the best surviving experiment configuration clear the integration bar on the held-out validation set?
+
+If yes:
+
+- proceed to Gate 5 re-evaluation with confidence.
+
+If no after sustained experimentation (50+ experiments):
+
+- document the conclusion honestly,
+- consider whether the signal hypothesis should be abandoned entirely or whether the problem requires a fundamentally different approach (different asset, different market, different prediction task).
+
+### Current gate results
+
+Last updated: March 14, 2026.
 
 - Gate 0: pass
 - Gate 1: pass
-- Gate 2: fail on signal quality
+- Gate 2: fail on signal quality (precision 0.169, recall 0.261, ROC-AUC 0.641 on March 14, 2026 fresh data — recall now passes but precision needs >= 0.55)
 - Gate 3: pass for interface design, fail for integration readiness because Gate 2 failed
 - Gate 4: pass
 - Gate 5: fail
+- Gate 6: not yet attempted — blocked on Phase 12 (data universe expansion)
+- Gate 7: not yet attempted — blocked on Phase 13 (experiment loop)
 
 ---
 
@@ -1061,11 +1446,16 @@ Current gate result on March 13, 2026:
 When picking this roadmap up with zero context:
 
 - Assume the repo is **not** production-ready.
-- Assume all historical performance claims must be revalidated.
-- Assume 2025 artifacts are stale.
-- Treat naive backtesting results as scaffolding, not proof.
-- Prefer deleting confusing legacy behavior over preserving it.
-- Optimize for clarity, reproducibility, and honest evaluation.
+- The foundation infrastructure (Phases 0–10) is solid and complete. Do not redo this work.
+- The dataset is stale (ends July 2025). **Phase 11 (data refresh) is the first thing to do.**
+- The current model only sees price-derived technicals and one sentiment index. That is not enough data to reach the integration bar. **Phase 12 (expand data universe) is the critical phase** — it determines whether this repo can succeed at all.
+- Do not run the experiment loop (Phase 13) before Phase 12 is complete. Searching a narrow feature space is a waste of compute.
+- Do not manually tune model parameters outside the experiment loop. That defeats the purpose of systematic exploration.
+- If the experiment loop fails to find a configuration that clears the bar after 50+ experiments on an expanded feature set, that is a valid and important result — it means the signal hypothesis should be reconsidered.
+- The evaluation harness, data pipeline, and test suite are immutable during experimentation. If you think they need changes, propose them as a separate phase.
+- Add new data families one at a time. Validate each independently before combining. Do not integrate everything at once.
 
-Your first job is not to improve model sophistication.
-Your first job is to make the repo trustworthy enough that future model results mean something.
+Your first job is to refresh the data (Phase 11).
+Your second job is to expand what the model can see (Phase 12).
+Your third job is to systematically search the expanded space (Phase 13).
+Do not skip phases.
