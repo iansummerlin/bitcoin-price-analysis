@@ -1,0 +1,53 @@
+{
+  "model_name": "xgboost_direction",
+  "target_column": "target_direction_cost_adj_1h",
+  "train_window": 4320,
+  "test_window": 720,
+  "windows_evaluated": 6,
+  "scores": {
+    "directional_accuracy": 0.7208333333333333,
+    "precision": 0.16894485091216926,
+    "recall": 0.26111977747531306,
+    "f1": 0.17764965076263461,
+    "positive_rate": 0.22083333333333333,
+    "roc_auc": 0.6408605311946199,
+    "fit_accuracy": 0.8835262345679012,
+    "fit_positive_rate": 0.12361111111111112
+  },
+  "baseline_scores": {
+    "persistence_price": {
+      "rmse": 440.8426661162518,
+      "mae": 298.6424375000002
+    },
+    "zero_return": {
+      "rmse": 0.00492687928620755,
+      "mae": 0.0033051540819231773
+    },
+    "momentum_return": {
+      "rmse": 0.006896586002800096,
+      "mae": 0.0047593723122073385
+    },
+    "mean_reversion_return": {
+      "rmse": 0.007026266490893356,
+      "mae": 0.004694573131534263
+    },
+    "momentum_direction": {
+      "directional_accuracy": 0.4976851851851851,
+      "precision": 0.1570076289923025,
+      "recall": 0.5018161083859085,
+      "f1": 0.23481672342604112,
+      "positive_rate": 0.5018518518518519,
+      "roc_auc": 0.49993811375136704
+    },
+    "mean_reversion_direction": {
+      "directional_accuracy": 0.5041666666666668,
+      "precision": 0.15753705618176214,
+      "recall": 0.4959876878063781,
+      "f1": 0.23588718534834763,
+      "positive_rate": 0.4953703703703704,
+      "roc_auc": 0.5003485093660951
+    }
+  },
+  "prediction_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/artifacts/horizon_1h_predictions.csv",
+  "generated_at": "2026-03-15T13:16:33.033334+00:00"
+}

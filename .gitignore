@@ -34,3 +34,6 @@ nohup.out
 
 # Ignore environment variables file
 .env
+
+# External data cache (Phase 12)
+data/cache/

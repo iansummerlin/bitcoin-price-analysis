@@ -1,0 +1,81 @@
+[
+  {
+    "timestamp": "2026-03-15T13:38:39.514833+00:00",
+    "model_name": "xgboost_direction",
+    "target_column": "target_direction_cost_adj",
+    "train_window": 4320,
+    "test_window": 720,
+    "windows_evaluated": 6,
+    "scores": {
+      "directional_accuracy": 0.6937,
+      "precision": 0.2161,
+      "recall": 0.3804,
+      "f1": 0.2483,
+      "positive_rate": 0.2843,
+      "roc_auc": 0.6285,
+      "fit_accuracy": 0.8854,
+      "fit_positive_rate": 0.1236
+    },
+    "baseline_scores": {
+      "persistence_price": {
+        "rmse": 440.7691,
+        "mae": 298.6057
+      },
+      "zero_return": {
+        "rmse": 0.0049,
+        "mae": 0.0033
+      },
+      "momentum_return": {
+        "rmse": 0.0069,
+        "mae": 0.0048
+      },
+      "mean_reversion_return": {
+        "rmse": 0.007,
+        "mae": 0.0047
+      },
+      "momentum_direction": {
+        "directional_accuracy": 0.4977,
+        "precision": 0.1571,
+        "recall": 0.5013,
+        "f1": 0.2348,
+        "positive_rate": 0.5016,
+        "roc_auc": 0.4997
+      },
+      "mean_reversion_direction": {
+        "directional_accuracy": 0.5037,
+        "precision": 0.1574,
+        "recall": 0.4955,
+        "f1": 0.2357,
+        "positive_rate": 0.4956,
+        "roc_auc": 0.4999
+      }
+    },
+    "gate": [
+      {
+        "name": "Precision",
+        "value": 0.2161,
+        "op": ">=",
+        "target": 0.55,
+        "passed": false
+      },
+      {
+        "name": "Recall",
+        "value": 0.3804,
+        "op": ">=",
+        "target": 0.15,
+        "passed": true
+      },
+      {
+        "name": "ROC-AUC",
+        "value": 0.6285,
+        "op": ">=",
+        "target": 0.6,
+        "passed": true
+      }
+    ],
+    "notes": "",
+    "dataset_rows": 72957,
+    "dataset_start": "2017-11-16T00:00:00+00:00",
+    "dataset_end": "2026-03-13T23:00:00+00:00"
+  }
+]

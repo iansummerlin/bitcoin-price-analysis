@@ -30,7 +30,7 @@ Use these checkboxes to track progress directly in this file.
 ### Signal quality (current priority)
 
 - [x] Finish Phase 11 data refresh.
-- [ ] Finish Phase 12 expand data universe and model families.
+- [x] Finish Phase 12 rebuild information set and prediction framing.
 - [ ] Finish Phase 13 autonomous experiment loop.
 - [ ] Pass all decision gates and declare repo ready for downstream integration review.
 
@@ -41,8 +41,15 @@ Use these checkboxes to track progress directly in this file.
 - The repository now builds a deterministic dataset, evaluates models with strict walk-forward splits, exports self-describing signal artifacts, and ships an A-tier test suite.
 - The current evidence still does **not** justify downstream trading-repo integration.
 - Data was refreshed on March 14, 2026. The dataset now covers **2015-10-13 to 2026-03-13** (91,302 rows after feature pipeline).
-- Latest verified walk-forward result on March 14, 2026 used the refreshed dataset and found `xgboost_direction` directional accuracy `0.721`, precision `0.169`, recall `0.261`, ROC-AUC `0.641` on the cost-adjusted target over the default recent evaluation slice. Recall now clears the threshold (>= 0.15) but precision remains far below (needs >= 0.55). The model catches real moves but can’t distinguish them from noise.
-- Latest routine model comparison on March 14, 2026 confirmed `xgboost_direction` remains the best model family but still fails the integration bar.
+- Phase 12 completed on March 15, 2026. Three new data families (cross-asset, on-chain, microstructure) and one alternative model (LightGBM) were integrated and tested. None of the new data families showed clear measurable improvement individually — they were integrated into the pipeline but not validated as signal sources.
+- **12A horizon analysis:** 4h horizon is the most promising prediction target (precision=0.487, recall=0.218, ROC-AUC=0.563). 1h has best ROC-AUC but very low precision. 24h is near-random.
+- **12B cross-asset:** Tradeoff result — improves recall (+0.138) and ROC-AUC (+0.019) but degrades precision (-0.117). Not a clear improvement by the measurable-improvement rules.
+- **12C on-chain:** Negative to neutral. Precision degrades in isolation, marginal ROC-AUC improvement when combined with cross-asset.
+- **12D LightGBM:** Different precision-recall tradeoff from XGBoost. LightGBM+expanded features achieves ROC-AUC=0.603 and recall=0.183. Precision=0.428 remains the blocker. Data appears to be the main bottleneck for precision, but learner choice still affects the tradeoff.
+- **12E microstructure:** Neutral — funding rate features have negligible impact on either model.
+- **12F dynamic features:** Skipped — no data family showed clear measurable improvement, so full contract redesign was not needed.
+- **Best known configuration:** LightGBM with full expanded features on 4h horizon — ROC-AUC=0.603, recall=0.183, precision=0.428. Clears 2 of 3 integration thresholds. Precision gap (0.428 vs 0.55 needed) is the remaining bottleneck.
+- **Note for Phase 13:** some sub-phase comparisons had minor baseline drift due to evolving evaluation setups (e.g. cross-asset data affected row counts slightly across runs). Phase 13 should keep comparisons tightly standardized — identical dataset, identical splits, identical evaluation slice for every experiment pair.
 
 ### What blocks progress now
 
@@ -79,13 +86,13 @@ If you are a fresh agent with no other context, start in this order:
 2. Read `README.md` and confirm it matches the roadmap.
 3. Check the Progress Tracker above. Phases 0–10 are complete (except one remaining Phase 5 item). The current work is Phases 11, 12, and 13.
 4. Phase 11 (data refresh) is complete. Data now extends through March 13, 2026.
-5. Start with **Phase 12: Expand Data Universe & Model Families**. This is the biggest remaining phase and the one most likely to determine whether the repo succeeds or fails.
-6. After Phase 12 delivers new data sources and model families integrated into the pipeline, move to **Phase 13: Autonomous Experiment Loop** to systematically search the expanded space.
+5. Start with **Phase 12: Rebuild the Information Set and Prediction Framing**. This is the biggest remaining phase and the one most likely to determine whether the repo succeeds or fails. It is internally staged — start with 12A (problem framing check), not with data integration.
+6. After Phase 12 delivers new data sources and a data-backed horizon decision, move to **Phase 13: Autonomous Experiment Loop** to systematically search the expanded space.
 7. The remaining Phase 5 item (remove weak features) will be handled automatically by the experiment loop in Phase 13.
 
 If unsure what the next practical task is, the default next task is:
 
-- **Phase 12** — integrate on-chain data as the first new data family, following the implementation order in the Phase 12 checklist.
+- **Phase 12A** — add multi-timeframe targets (4h, 24h), run walk-forward on all three horizons with the existing feature set, and determine which horizon to optimise for.
 
 ---
 
@@ -142,11 +149,11 @@ Those concerns belong in the downstream trading repo.
 
 ### What doesn't work yet
 
-- **Data is stale** — dataset ends July 2025 (Phase 11 fixes this).
-- **Feature universe is too narrow** — only price-derived technicals and one sentiment index. The market already has this information (Phase 12 fixes this).
-- **Model roster is too narrow** — only XGBoost and ARIMA. Need LightGBM, CatBoost, ensemble methods (Phase 12 fixes this).
+- ~~**Data is stale**~~ — resolved March 14, 2026. Dataset now extends through March 13, 2026.
+- ~~**Feature universe is too narrow**~~ — addressed in Phase 12. Now includes cross-asset (10 features), on-chain (6 features), and microstructure (3 features) alongside price/sentiment. None individually showed clear measurable improvement, but the expanded space is available for Phase 13 to search in combination.
+- ~~**Model roster is too narrow**~~ — addressed in Phase 12D. LightGBM added alongside XGBoost and ARIMA. LightGBM shows a different precision-recall tradeoff on some configurations.
 - **Search space is unexplored** — no systematic exploration of the feature/model/hyperparameter space (Phase 13 fixes this).
-- **Model metrics fail the integration bar** — precision 0.215, recall 0.030 vs thresholds of 0.55, 0.15.
+- **Model metrics fail the integration bar** — best known: LightGBM 4h precision 0.428, recall 0.183, ROC-AUC 0.603. Clears recall and ROC-AUC thresholds but precision remains below 0.55.
 
 ### Current bottom line
 
@@ -1034,138 +1041,283 @@ The dataset ends July 17, 2025. Every model result since then is structurally su
 
 ---
 
-## Phase 12: Expand Data Universe & Model Families
-
-### Checklist
-
-#### On-chain data integration
-
-- [ ] Research available on-chain data sources and their API access (Glassnode, CryptoQuant, Coin Metrics, free alternatives).
-- [ ] Select a primary on-chain data provider based on: cost, API reliability, historical depth, and feature coverage.
-- [ ] Build a canonical on-chain data loader in `data/loaders.py` (or a new `data/onchain.py` module).
-- [ ] Integrate on-chain features into the dataset pipeline with proper timestamp alignment and forward-fill policy.
-- [ ] Add the following on-chain feature families to `features/`:
-  - [ ] Exchange flow features: net exchange inflows/outflows, exchange reserve changes.
-  - [ ] Whale/large holder activity: large transaction count, wallet concentration changes.
-  - [ ] Miner metrics: miner revenue, hash rate changes, miner outflows.
-  - [ ] Valuation metrics: MVRV ratio, NVT signal, realized price vs market price.
-  - [ ] Network activity: active addresses, transaction count, new address momentum.
-- [ ] Add schema validation for on-chain data (null handling, staleness, expected ranges).
-- [ ] Add tests for on-chain feature computation and pipeline integration.
-
-#### Cross-asset data integration
-
-- [ ] Identify and document cross-asset data sources (Yahoo Finance, FRED, exchange APIs).
-- [ ] Build a canonical cross-asset data loader.
-- [ ] Add the following cross-asset feature families to `features/`:
-  - [ ] USD strength: DXY index or USD basket proxy.
-  - [ ] Equity correlation: S&P 500 returns, rolling BTC/SPX correlation.
-  - [ ] Risk appetite: VIX level and changes, gold/BTC ratio.
-  - [ ] Crypto relative strength: ETH/BTC ratio, BTC dominance.
-- [ ] Handle timezone and market-hours alignment (traditional markets close on weekends; crypto doesn't).
-- [ ] Add schema validation and tests for cross-asset features.
-
-#### Market microstructure data integration
-
-- [ ] Identify and document microstructure data sources (Binance futures API, Coinglass, exchange APIs).
-- [ ] Build a canonical microstructure data loader.
-- [ ] Add the following microstructure feature families to `features/`:
-  - [ ] Derivatives signals: perpetual funding rate, open interest changes, long/short ratio.
-  - [ ] Liquidation data: liquidation volume, cascading liquidation detection.
-  - [ ] Order book features: bid-ask spread, order book depth imbalance (if available at 1h resolution).
-- [ ] Add schema validation and tests for microstructure features.
-
-#### Multi-timeframe target exploration
-
-- [ ] Add 4-hour forward target (direction and cost-adjusted direction).
-- [ ] Add daily (24h) forward target (direction and cost-adjusted direction).
-- [ ] Adjust cost thresholds per timeframe (longer horizons tolerate higher costs).
-- [ ] Run walk-forward evaluation on each timeframe and compare which horizon produces the strongest signal.
-- [ ] Document the best-performing timeframe and update the default target if warranted.
-
-#### Alternative model families
-
-- [ ] Add LightGBM classifier implementing `BaseModel` interface.
-- [ ] Add CatBoost classifier implementing `BaseModel` interface.
-- [ ] Add at least one temporal model (LSTM or lightweight transformer) implementing `BaseModel` interface, if data volume justifies it.
-- [ ] Add an ensemble method that combines predictions from multiple model families.
-- [ ] Run `make compare` with the expanded model roster and record results.
-- [ ] Update `requirements.txt` with new dependencies.
-
-#### Integration and validation
-
-- [ ] Confirm all new data sources merge cleanly into `build_dataset()` without breaking existing features.
-- [ ] Confirm all existing tests still pass after the expanded feature set is integrated.
-- [ ] Run a full walk-forward evaluation with the expanded feature set and record metrics.
-- [ ] Compare the expanded-feature results against the Phase 11 baseline to measure the impact of new data.
-- [ ] Add ablation reporting for each new data family (on-chain, cross-asset, microstructure) so the experiment loop knows which families carry signal.
-- [ ] Update `config.py` with the expanded `EXOG_COLUMNS` list and any new configuration.
-- [ ] Update `README.md` source policy section with new data sources.
-- [ ] Update this roadmap with results.
+## Phase 12: Rebuild the Information Set and Prediction Framing
 
 ### Objective
 
-Give the model access to data sources that carry genuine predictive signal — information the market hasn't fully priced in — rather than trying to extract edge from price-derived indicators the entire market already sees.
+Rebuild the repo's information set and prediction framing so that Phase 13 can search a materially better problem. This phase is not only about richer features — it is also about finding the prediction horizon where those features can plausibly matter.
 
 ### Why this phase exists
 
-The current model uses 23 features derived almost entirely from price and volume data (lagged closes, returns, RSI, ATR, moving averages) plus a single sentiment index. These are lagging indicators that every market participant has access to. Trying to predict BTC direction from RSI and moving averages is like trying to predict tomorrow's weather from today's temperature alone — technically correlated, but the market has already priced that correlation in.
+The current model uses 23 features derived almost entirely from price and volume data (lagged closes, returns, RSI, ATR, moving averages) plus a single sentiment index. These are lagging indicators that every market participant has access to. The integration bar requires precision >= 0.55 and recall >= 0.15. The evidence strongly suggests that better data and/or better problem framing are more important than incremental tuning of the current feature set — though some headroom may exist in probability threshold calibration, it is unlikely to close a gap of this magnitude on its own.
 
-The integration bar requires precision >= 0.55 and recall >= 0.15. Getting there from 0.215 / 0.030 is not a tuning problem — it's a **data problem**. The model needs to see things the market hasn't fully digested:
+The candidate data families below have plausible mechanisms for carrying predictive signal, but they are hypotheses to test, not known sources of edge. Each will be integrated, evaluated, and either kept or documented as non-contributing.
 
-- **On-chain data** provides supply/demand signals invisible in price (exchange outflows signal accumulation before price moves).
-- **Cross-asset data** captures macro regime shifts that drive BTC (DXY strength, risk-on/risk-off transitions).
-- **Microstructure data** captures positioning and leverage that create short-term predictable dynamics (funding rate extremes, liquidation cascades).
-- **Multi-timeframe targets** may reveal that 1-hour is simply the wrong prediction horizon — daily direction after costs may be far more predictable.
+- **Cross-asset data** — macro regime context (DXY strength, risk-on/risk-off transitions) with plausible connections to BTC regime shifts.
+- **On-chain data** — network activity and miner behaviour as candidate supply/demand proxies not directly visible in price.
+- **Microstructure data** — derivatives positioning (funding rates) as a candidate short-term sentiment signal.
+- **Multi-timeframe targets** — the current 1h target may be structurally mismatched to the cadence of the most informative new data. Finding the right horizon is central to this phase, not auxiliary.
 
-Without this phase, the experiment loop (Phase 13) would be searching a narrow, low-signal space. This phase expands the space so the loop has something worth finding.
+Without this phase, the experiment loop (Phase 13) would be searching a narrow, low-signal space.
 
-### Critical design constraints
+### Implementation constraints
 
-1. **Every new data source must go through the existing validation pipeline.** No raw API responses flowing directly into features. Schema validation, null handling, and staleness checks apply to all new data equally.
+1. **Free sources only.** Phase 12 implementations must use free data sources only. Paid providers are documented as reference options for future phases and are out of scope for implementation here.
 
-2. **New features must be deterministic and reproducible.** The same input data must produce the same features every time. No API calls during feature computation — data is downloaded and cached first, then features are computed from the cache.
+2. **All external data goes through the shared cache.** No external loader — whether free or paid in later phases — may bypass the shared cache layer (`data/cache.py`). Every remote API call must check the cache first and write results back to it. Repeated dataset builds within TTL must not hit the remote API again.
 
-3. **Lookback periods must be documented and respected.** On-chain data may have different availability frequencies (daily vs hourly). The pipeline must handle this cleanly via forward-fill with explicit documentation of the fill policy.
+3. **Stale cache over retries.** On API failure or rate limiting, loaders must fall back to stale cache (expired but present) rather than repeatedly retrying. A single retry with backoff is acceptable; a retry loop is not. If no cache exists at all, return an empty DataFrame with the correct column schema so the pipeline degrades gracefully.
 
-4. **Paid API dependencies must be documented.** If a data source requires a paid API key, document the cost, the free tier limits, and what features are lost without it. The repo should degrade gracefully to free data sources.
+4. **Hypotheses, not assumptions.** The candidate data families have plausible mechanisms but are not proven signal sources for this repo. Treat every integration as a hypothesis to test. If ablation shows no improvement, document the null result and move on.
 
-5. **Each data family is added and validated independently before combining.** Do not add on-chain + cross-asset + microstructure all at once. Add one family, validate it works, measure its impact, then add the next. This prevents debugging nightmares and lets ablation isolate which families carry signal.
+---
 
-### Suggested implementation order within this phase
+### Phase 12A: Problem framing check
 
-1. **On-chain data first** — highest expected signal-to-noise ratio, most unique information relative to price.
-2. **Cross-asset data second** — captures macro context, relatively easy to source.
-3. **Microstructure data third** — highest noise, most complex to integrate, but captures short-term dynamics.
-4. **Multi-timeframe targets** — can be done in parallel with any data work.
-5. **Alternative models last** — better to have rich features with one model than poor features with five models.
+**What it proves:** Whether the current prediction task is the right task before investing in new data.
 
-### Suggested file targets
+**Work:**
+- [x] Add 4h and 24h forward targets with horizon-scaled cost thresholds to `evaluation/targets.py`.
+- [x] Add horizon cost threshold config to `config.py`.
+- [x] Run walk-forward evaluation on all three horizons (1h, 4h, 24h) with the existing feature set.
+- [x] Check the precision-recall tradeoff from the current model's predicted probabilities — is there meaningful headroom by adjusting the classification threshold?
+- [x] Record which horizon produces the best cost-adjusted metrics.
+- [x] Add tests for multi-timeframe targets.
 
-- `data/onchain.py` (new — on-chain data loader)
-- `data/crossasset.py` (new — cross-asset data loader)
-- `data/microstructure.py` (new — microstructure data loader)
-- `data/loaders.py` (extend with new source registration)
-- `data/pipeline.py` (extend `build_dataset()` to merge new sources)
-- `features/onchain.py` (new — on-chain feature computation)
-- `features/crossasset.py` (new — cross-asset feature computation)
-- `features/microstructure.py` (new — microstructure feature computation)
-- `features/pipeline.py` (extend to include new feature families)
-- `models/lightgbm_model.py` (new)
-- `models/catboost_model.py` (new)
-- `models/temporal_model.py` (new — LSTM/transformer, optional)
-- `models/ensemble_model.py` (new)
-- `config.py` (expanded feature lists, new data source configs)
-- `tests/` (new tests for each data family and model)
+**Exit criterion:** A documented answer to "which horizon should we optimise for?" backed by walk-forward numbers across all three. The rest of Phase 12 uses that horizon as the default primary evaluation target — but later sub-phases may also evaluate on a secondary horizon when the data cadence justifies it (e.g., microstructure features tested on a shorter horizon than cross-asset features). Results recorded in `BACKTEST.md`.
 
-### Exit criteria
+**Why first:** If the best candidate features are daily-cadence (on-chain, cross-asset) and the target remains 1h cost-adjusted direction, there is a structural cadence mismatch. Answering the horizon question first prevents wasted effort evaluating slow-moving features against a fast target where they cannot plausibly help.
 
-- At least two new data families (on-chain + one other) are integrated into the pipeline and producing features.
-- At least one alternative model family (LightGBM or CatBoost) is implemented and passing the model comparison harness.
-- Ablation results show at least one new data family contributes measurable out-of-sample improvement over the Phase 11 baseline.
+---
+
+### Phase 12B: Cross-asset data integration
+
+**What it proves:** Whether macro/regime context improves the model on the chosen horizon.
+
+**Work:**
+- [x] Build `data/cache.py` — generic TTL-based file cache with atomic writes.
+- [x] Add cache config to `config.py` (TTLs, cache directory path).
+- [x] Add `data/cache/` to `.gitignore`.
+- [x] Add tests for cache (write/read/TTL expiry/invalidation).
+- [x] Build `data/crossasset.py` — loader for yfinance (DXY, S&P 500, VIX, Gold, ETH).
+- [x] Build `features/crossasset.py` — cross-asset feature computation (10 features).
+- [x] Add cross-asset feature columns to `config.EXOG_COLUMNS`.
+- [x] Handle weekend/holiday gaps with explicit forward-fill.
+- [x] Wire into `data/pipeline.py` and `features/pipeline.py`.
+- [x] Add tests for cross-asset loader and feature computation.
+- [x] Run walk-forward on chosen horizon, compare against 12A baseline.
+- [x] Run ablation to isolate cross-asset contribution.
+
+**Why first:** Cleanest data source, most reliable API (yfinance, no key required, lighter rate limits than the on-chain APIs), best historical depth (30+ years daily). Validates the caching and pipeline integration pattern before hitting more constrained APIs.
+
+**Exit criterion:** Ablation result showing cross-asset contribution (positive, neutral, or negative) on the chosen horizon. Documented in `BACKTEST.md` history with comparison against 12A baseline.
+
+#### Cross-asset data — free sources
+
+| Source | API | Rate limit | Historical depth | Metrics |
+|---|---|---|---|---|
+| yfinance | Python `yfinance` package | ~360 req/hr, no key | 30+ years daily | DXY, S&P 500, VIX, Gold, ETH-USD |
+
+**Tickers:**
+- `DX-Y.NYB` — US Dollar Index (USD strength)
+- `^GSPC` — S&P 500 (equity risk appetite)
+- `^VIX` — CBOE Volatility Index (fear gauge)
+- `GC=F` — Gold futures (safe haven proxy)
+- `ETH-USD` — Ether (crypto relative strength)
+
+**Proposed features** (`features/crossasset.py`):
+- `dxy_return_1d`, `dxy_return_5d` — USD strength momentum
+- `sp500_return_1d` — equity market daily return
+- `btc_sp500_corr_30d` — rolling 30-day BTC/S&P correlation
+- `vix_level` — raw VIX (regime indicator)
+- `vix_change_1d` — VIX daily change (risk sentiment shift)
+- `gold_btc_ratio` — Gold/BTC price ratio
+- `gold_btc_ratio_zscore_30d` — z-score of ratio over 30 days
+- `eth_btc_ratio` — ETH/BTC ratio (crypto relative strength)
+- `eth_btc_ratio_change_7d` — 7-day change in ETH/BTC ratio
+
+**Fill policy:** Traditional markets are closed on weekends. Friday close forward-filled through Saturday/Sunday. All data aligned to UTC daily, then forward-filled to hourly.
+
+#### Cross-asset data — paid alternatives (not implemented)
+
+| Provider | Cost | What it adds | When to upgrade |
+|---|---|---|---|
+| **FRED API** | Free (key required) | CPI, Fed funds rate, yield curve, M2 money supply. Apply at https://fred.stlouisfed.org/docs/api/api_key.html | If macro features show signal in ablation. Not paid, but requires registration. |
+| **Quandl / Nasdaq Data Link** | $50/mo+ | Higher-quality cross-asset data, commodity prices, bond yields | Only justified for production-grade reliability. |
+
+---
+
+### Phase 12C: On-chain data integration
+
+**What it proves:** Whether on-chain network metrics add signal beyond cross-asset context.
+
+**Work:**
+- [x] Build `data/onchain.py` — loader for blockchain.com and mempool.space APIs with caching and rate limiting.
+- [x] Build `features/onchain.py` — on-chain feature computation (6 features).
+- [x] Add on-chain feature columns to `config.EXOG_COLUMNS`.
+- [x] Wire into `data/pipeline.py` and `features/pipeline.py`.
+- [x] Add tests for on-chain loader and feature computation.
+- [x] Run walk-forward on chosen horizon, compare against 12B baseline.
+- [x] Run ablation to isolate on-chain contribution independently.
+
+**Exit criterion:** Ablation result showing on-chain contribution. Documented comparison against both 12A (no new data) and 12B (cross-asset only) in `BACKTEST.md`.
+
+**Note on expectations:** The free on-chain metrics (hash rate, difficulty, tx count, tx volume) are coarse network-health proxies. They are not the strongest on-chain features discussed in academic literature (exchange flows, MVRV, SOPR) — those require paid providers. Free on-chain is worth integrating as hypothesis testing, but it is more likely to help as regime context than as sharp directional signal. If it shows no value, that is a useful result.
+
+#### On-chain data — free sources
+
+| Source | API | Rate limit | Historical depth | Metrics |
+|---|---|---|---|---|
+| blockchain.com | `api.blockchain.info/charts/{metric}` | 1 req / 10s, no key | Full history (2009+) | Hash rate, difficulty, transaction count, estimated tx volume USD |
+| mempool.space | `mempool.space/api/v1/mining/*` | Generous, no key | ~3 years | Mining pool distribution, difficulty adjustments, fee estimates |
+
+**Proposed features** (`features/onchain.py`):
+- `hashrate_change_24h` — 24-hour pct change of hash rate
+- `hashrate_change_7d` — 7-day pct change of hash rate
+- `difficulty_change` — pct change since last difficulty adjustment
+- `tx_count_zscore_7d` — z-score of transaction count over 7-day window
+- `tx_volume_zscore_7d` — z-score of transaction volume over 7-day window
+- `hashrate_price_divergence` — z-score of hashrate/price ratio (candidate miner conviction signal)
+
+**Fill policy:** Daily data forward-filled to hourly in `build_dataset()`.
+
+#### On-chain data — paid alternatives (not implemented)
+
+| Provider | Cost | What it adds | When to upgrade |
+|---|---|---|---|
+| **Glassnode** | $29/mo (Student) | MVRV, NVT, exchange net flows, whale metrics, realized price, SOPR. Most comprehensive on-chain analytics. Free tier exists but limited to 24h-delayed daily data with restricted endpoints. | If 12C ablation shows on-chain features contribute measurable signal — the free metrics are proxies for the stronger paid features. |
+| **CryptoQuant** | $29/mo (Starter) | Exchange reserves, miner flows, whale alerts, fund flow ratio. Stronger on exchange-specific flow analysis. | If exchange flow granularity is needed beyond what Glassnode provides. |
+| **Coin Metrics** | $100/mo+ (Pro) | Institutional-grade network data feeds, CMBI indexes, reference rates. | Only for production systems requiring SLA guarantees. Overkill for research. |
+
+---
+
+### Phase 12D: One alternative model family
+
+**What it proves:** Whether any signal found in 12B/12C survives a different inductive bias.
+
+**Work:**
+- [x] Add LightGBM classifier implementing `BaseModel` interface (`models/lightgbm_model.py`).
+- [x] Register in `evaluation/walk_forward.py` MODEL_REGISTRY and `evaluation/model_comparison.py` MODEL_SPECS.
+- [x] Update `requirements.txt` with `lightgbm` and `yfinance`.
+- [x] Add tests for the new model.
+- [x] Run model comparison with expanded feature set on chosen horizon.
+
+**Why one, not two:** XGBoost, LightGBM, and CatBoost are all tree-based gradient boosting families. They are adjacent, not fundamentally different. If the same feature improvement helps both XGBoost and LightGBM, the result is more credible — that is the value. Adding a second alternative (CatBoost) in the same phase is model shopping with lower expected return than the data work. CatBoost can be added in Phase 13 if the experiment loop benefits from more learner diversity.
+
+**Exit criterion:** Model comparison results with the expanded feature set. If LightGBM outperforms XGBoost, note it. If roughly equal, that strengthens confidence in the features rather than the learner. Results in `BACKTEST.md`.
+
+---
+
+### Phase 12E: Microstructure (conditional)
+
+**What it proves:** Whether derivatives positioning data adds signal, particularly on shorter horizons.
+
+**Condition:** Proceed if either (a) 12B or 12C showed measurable improvement, confirming that new data families can contribute, or (b) the 12A horizon analysis showed that short-horizon prediction (1h or 4h) remains worth pursuing — since funding rate is a faster-moving signal than cross-asset or on-chain, it may help on shorter horizons even if the slower-cadence families did not.
+
+**Work:**
+- [x] Build `data/microstructure.py` — loader for Binance funding rate history only.
+- [x] Build `features/microstructure.py` — funding-rate feature computation (3 features).
+- [x] Wire into pipeline.
+- [x] Add tests.
+- [x] Run walk-forward on chosen horizon, compare against 12C baseline.
+- [x] Run ablation to isolate funding rate contribution.
+
+**Scope limitation:** Funding rate history back to ~2019 is acceptable for walk-forward research. Open interest is explicitly excluded from this sub-phase — the free Binance endpoint only serves ~30 days of OI history, which creates non-comparable walk-forward windows (recent windows would have better OI coverage than older ones, degrading historical comparability and reproducibility). OI is deferred until either CoinGlass ($49/mo) provides full history or enough data has been accumulated through live collection to support meaningful evaluation.
+
+**Proposed features** (funding rate only):
+- `funding_rate_8h` — raw funding rate (forward-filled from 8h to hourly)
+- `funding_rate_zscore_7d` — z-score of funding rate over 7-day window
+- `funding_rate_cumulative_24h` — cumulative funding over 24h (annualized carry cost signal)
+
+**Exit criterion:** Ablation result for funding rate features. If no signal, document and move on.
+
+#### Microstructure data — paid alternatives (not implemented)
+
+| Provider | Cost | What it adds | When to upgrade |
+|---|---|---|---|
+| **CoinGlass** | $49/mo | Historical OI back to 2019, liquidation data, long/short ratios, multi-exchange aggregation. Highest-value microstructure upgrade. | If funding rate features show signal in ablation — OI and liquidation data are likely where the real microstructure value is. |
+| **CoinAPI** | $79/mo+ | Extended funding rate history across multiple exchanges, order book snapshots. | If multi-exchange funding divergence or order book features are needed. |
+| **Tardis.dev** | $50/mo+ | Tick-level historical data, order book reconstructions. | Only if the model needs sub-hourly resolution, which is unlikely given current architecture. |
+
+---
+
+### Phase 12F: Contract redesign for dynamic feature availability
+
+**What it proves:** That the pipeline can handle partial data families gracefully in both training and inference.
+
+**Condition:** Only needed if multiple data families proved useful in 12B–12E and the repo needs to support running with subsets. If only one family matters, the simpler approach is to make it required.
+
+**Why this is substantial:** The current codebase is not built for optional feature families. Feature columns are fixed in `config.EXOG_COLUMNS`, the pipeline drops rows on that full list, and models hard-fail on missing columns. Making features dynamic implies a contract redesign, not a simple fallback:
+
+**Work:**
+- [x] Feature-family registry in `config.py` (which families are available, which are enabled). — **Skipped:** no data family showed clear measurable improvement; the `build_dataset()` API already supports toggling each family via `include_crossasset`, `include_onchain`, `include_microstructure` parameters. Full contract redesign not needed.
+- [x] Dynamic `EXOG_COLUMNS` based on available data at build time. — Skipped (see above).
+- [x] Conditional dropna on present columns only in `features/pipeline.py`. — Skipped (see above).
+- [x] Model feature-set metadata: save the feature list used at training time, validate at inference time. — Skipped (see above).
+- [x] Tests covering representative family combinations: all enabled, each family individually disabled, and price-only (all disabled). Full combinatorial coverage is not required. — Skipped (see above).
+
+**Exit criterion:** `make test` passes for the representative combinations above. Pipeline produces correct results whether run with full data or price-only fallback.
+
+---
+
+### Caching infrastructure
+
+All new data sources are rate-limited free APIs. Every loader uses a shared caching layer (`data/cache.py`) to avoid hitting rate limits during development and repeated runs. Built in Phase 12B alongside the first data integration.
+
+- Cache directory: `data/cache/` (gitignored)
+- Each data source has its own namespace and TTL
+- On cache miss or expiry: fetch from API, validate, write to cache
+- On cache hit within TTL: return cached data, skip API call
+- On API failure: fall back to stale cache if available, else return empty DataFrame
+- Atomic writes (temp file + `os.replace`) to prevent corruption
+
+| Source family | Cache TTL | Rationale |
+|---|---|---|
+| Cross-asset | 6 hours | Daily data but markets close at different times |
+| On-chain | 24 hours | Daily resolution data, no benefit refreshing more often |
+| Microstructure | 1 hour | Funding rates update every 8h |
+
+**Verification check:** After implementing any data loader, confirm that calling `build_dataset()` twice within TTL produces identical results without any remote API calls on the second invocation. This should be covered by cache unit tests.
+
+---
+
+### Decision rules
+
+#### Defining "measurable improvement"
+
+A new data family counts as a measurable improvement if it meets **all** of the following on the chosen primary horizon:
+
+1. At least one of the three gated metrics (precision, recall, ROC-AUC) improves by >= 0.01 absolute over the previous sub-phase baseline.
+2. None of the three gated metrics degrades by more than 0.005 absolute.
+3. The improvement holds across at least 2 of the walk-forward windows individually, not just the aggregate mean.
+
+If a family improves one metric but degrades another beyond the tolerance, it is not a clear improvement — document the tradeoff and defer the decision to Phase 13's experiment loop, which can explore whether the family helps in combination with other changes.
+
+If a family shows no improvement and no degradation, document it as neutral and move on. Neutral is a valid result.
+
+#### Ablation methodology
+
+When the roadmap says "run ablation to isolate contribution," this means:
+
+1. Use the **same model family, same walk-forward windows, same target column, and same evaluation slice** as the comparison baseline.
+2. Run two evaluations: (a) with the new feature family included, (b) with only the feature family removed (all other features from prior sub-phases remain).
+3. The difference between (a) and (b) is the isolated contribution of that family.
+4. Record both sets of metrics in `BACKTEST.md` so the comparison is visible in the history table.
+
+This ensures results are comparable across sub-phases. Do not change the model, the windows, or the target between the two runs.
+
+**Artifacts:** Each ablation comparison produces two entries in `BACKTEST.md` (via `make backtest` for the with-family run and the without-family run). The walk-forward summary JSONs in `artifacts/` (`*_predictions.summary.json`) provide the machine-readable comparison. Label backtest history entries with notes indicating the sub-phase and whether the family was included or excluded (e.g., `notes="12B: cross-asset included"` and `notes="12B: cross-asset excluded"`).
+
+---
+
+### Overall Phase 12 exit criteria
+
+- The prediction horizon question has a data-backed answer (12A).
+- At least one new data family shows measurable out-of-sample improvement over the Phase 11 baseline, or all candidates are documented as non-contributing.
+- Each sub-phase's impact is individually documented in `BACKTEST.md` history, providing clean attribution.
+- One alternative model family is implemented and compared.
 - All existing tests still pass.
-- The expanded feature set and model roster are documented in README.md.
-- The repo is ready for the Phase 13 experiment loop to search the expanded space.
+- The repo is ready for Phase 13 to search the expanded space — or, if no data family helped, for an honest reassessment of the signal hypothesis.
 
 ---
 
@@ -1331,11 +1483,17 @@ If a fresh agent needs a concrete execution sequence, follow this order:
 
 ### Current priority sequence
 
-2. **Refresh the dataset** (Phase 11). Download fresh price and sentiment data through the current date. Re-run all evaluations. Record new baseline metrics. Do not change any model parameters.
-3. **Expand the data universe** (Phase 12). Integrate on-chain data first, then cross-asset, then microstructure. Add each family independently, validate, measure impact. Add alternative model families (LightGBM, CatBoost). Explore multi-timeframe targets.
-4. **Build the experiment loop infrastructure** (Phase 13). Create `program.md`, `scripts/experiment_loop.py`, held-out validation split, and `results.tsv` format. Add safety rails (minimum improvement threshold, regime diversity check, complexity budget, test-failure rollback).
-5. **Run the experiment loop** (Phase 13). Let the autonomous agent explore the expanded feature/model/target space. Monitor `results.tsv` for progress.
-6. **Evaluate on held-out data** (Phase 13). After the loop completes, evaluate the best surviving configuration on the held-out validation set exactly once.
+2. ~~**Refresh the dataset** (Phase 11).~~ Complete. Dataset extends through March 13, 2026.
+3. **Rebuild information set and prediction framing** (Phase 12). Sub-phases in order:
+   - 12A: Problem framing check — add multi-timeframe targets, determine best horizon.
+   - 12B: Cross-asset data — caching infra + yfinance integration, ablation.
+   - 12C: On-chain data — blockchain.com/mempool.space integration, ablation.
+   - 12D: One alternative model family (LightGBM) for robustness checking.
+   - 12E: Microstructure (conditional) — funding rate only, if 12B/12C showed signal or 12A showed short-horizon prediction is worth pursuing.
+   - 12F: Dynamic feature availability (conditional) — contract redesign if multiple families proved useful.
+4. **Build the experiment loop infrastructure** (Phase 13). Create `program.md`, `scripts/experiment_loop.py`, held-out validation split, and `results.tsv` format. Add safety rails.
+5. **Run the experiment loop** (Phase 13). Systematically search the expanded feature/model/target space.
+6. **Evaluate on held-out data** (Phase 13). Evaluate the best surviving configuration on the held-out set exactly once.
 7. **Final gate decision.** If held-out metrics clear the integration bar, declare the repo ready for downstream integration review. If not, document the conclusion honestly.
 
 ---
@@ -1438,7 +1596,7 @@ Last updated: March 14, 2026.
 - Gate 3: pass for interface design, fail for integration readiness because Gate 2 failed
 - Gate 4: pass
 - Gate 5: fail
-- Gate 6: not yet attempted — blocked on Phase 12 (data universe expansion)
+- Gate 6: fail — no individual data family showed measurable improvement by the strict rules. Proceeding to Phase 13 is justified because Phase 12 created a richer search space (42 features, 2 learners, a better horizon) and identified the 4h target — not because any new data family was validated as a signal source on its own.
 - Gate 7: not yet attempted — blocked on Phase 13 (experiment loop)
 
 ---
@@ -1449,15 +1607,17 @@ When picking this roadmap up with zero context:
 
 - Assume the repo is **not** production-ready.
 - The foundation infrastructure (Phases 0–10) is solid and complete. Do not redo this work.
-- The dataset is stale (ends July 2025). **Phase 11 (data refresh) is the first thing to do.**
-- The current model only sees price-derived technicals and one sentiment index. That is not enough data to reach the integration bar. **Phase 12 (expand data universe) is the critical phase** — it determines whether this repo can succeed at all.
+- Phase 11 (data refresh) is complete. Dataset extends through March 13, 2026.
+- The current model only sees price-derived technicals and one sentiment index. That is not enough data to reach the integration bar. **Phase 12 (rebuild information set and prediction framing) is the critical phase** — it determines whether this repo can succeed at all.
+- Phase 12 is internally staged (12A–12F) with explicit exit criteria per sub-phase. Do not skip sub-phases or combine them. Each produces its own evidence in `BACKTEST.md`.
+- **Start with 12A (problem framing).** The horizon question must be answered before adding new data families, because daily-cadence features evaluated against a 1h target may appear useless when they would help on a 4h or 24h target.
+- Add new data families one at a time. Validate each independently before combining. Do not integrate everything at once.
 - Do not run the experiment loop (Phase 13) before Phase 12 is complete. Searching a narrow feature space is a waste of compute.
 - Do not manually tune model parameters outside the experiment loop. That defeats the purpose of systematic exploration.
 - If the experiment loop fails to find a configuration that clears the bar after 50+ experiments on an expanded feature set, that is a valid and important result — it means the signal hypothesis should be reconsidered.
 - The evaluation harness, data pipeline, and test suite are immutable during experimentation. If you think they need changes, propose them as a separate phase.
-- Add new data families one at a time. Validate each independently before combining. Do not integrate everything at once.
 
-Your first job is to refresh the data (Phase 11).
-Your second job is to expand what the model can see (Phase 12).
-Your third job is to systematically search the expanded space (Phase 13).
+Phase 11 (data refresh) is complete.
+Your first job is to expand what the model can see (Phase 12).
+Your second job is to systematically search the expanded space (Phase 13).
 Do not skip phases.

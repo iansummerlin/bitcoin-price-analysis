@@ -13,6 +13,7 @@ from config import DEFAULT_EVALUATION_MAX_ROWS
 from data.pipeline import build_dataset
 from evaluation.walk_forward import walk_forward_evaluate
 from models.arima_model import ImprovedARIMAModel
+from models.lightgbm_model import LightGBMDirectionModel
 from models.xgboost_model import XGBoostDirectionModel, XGBoostPriceModel
 
 
@@ -53,6 +54,13 @@ MODEL_SPECS = {
         "rows": 24 * 90,
         "factory": lambda: XGBoostDirectionModel(n_estimators=80, max_depth=3),
     },
+    "lightgbm_direction": {
+        "target_column": "target_direction_cost_adj",
+        "train_window": 24 * 45,
+        "test_window": 24 * 15,
+        "rows": 24 * 90,
+        "factory": lambda: LightGBMDirectionModel(n_estimators=80, max_depth=3),
+    },
 }
 
 ACCEPTANCE_THRESHOLDS = {
@@ -85,10 +93,20 @@ def run_model_comparison(output_dir: str | Path = "artifacts") -> ComparisonResu
         MODEL_REGISTRY[model_name] = original_model
         model_results[model_name] = asdict(result)
 
-    direction_metrics = model_results["xgboost_direction"]["scores"]
+    # Determine winner among directional classifiers
+    direction_candidates = ["xgboost_direction", "lightgbm_direction"]
     winner = "xgboost_direction"
+    best_roc = -1.0
+    for cand in direction_candidates:
+        if cand in model_results:
+            roc = model_results[cand]["scores"].get("roc_auc", 0.0)
+            if roc > best_roc:
+                best_roc = roc
+                winner = cand
+
+    direction_metrics = model_results[winner]["scores"]
     conclusion = (
-        "Current best model is xgboost_direction, but cost-aware precision/recall remain too weak "
+        f"Current best model is {winner}, but cost-aware precision/recall remain too weak "
         "for downstream trading dependency status."
     )
     if (
@@ -96,7 +114,7 @@ def run_model_comparison(output_dir: str | Path = "artifacts") -> ComparisonResu
         and direction_metrics.get("recall", 0.0) >= ACCEPTANCE_THRESHOLDS["directional_recall_min"]
         and direction_metrics.get("roc_auc", 0.0) >= ACCEPTANCE_THRESHOLDS["directional_roc_auc_min"]
     ):
-        conclusion = "Current directional model clears the provisional precision/recall bar for integration review."
+        conclusion = f"Current directional model ({winner}) clears the provisional precision/recall bar for integration review."
 
     comparison = ComparisonResult(
         generated_at=datetime.now(timezone.utc).isoformat(),

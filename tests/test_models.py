@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from config import DEFAULT_DIRECTION_TARGET_COLUMN, DEFAULT_RETURN_TARGET_COLUMN, EXOG_COLUMNS
+from config import CROSSASSET_COLUMNS, DEFAULT_DIRECTION_TARGET_COLUMN, DEFAULT_RETURN_TARGET_COLUMN, EXOG_COLUMNS, MICROSTRUCTURE_COLUMNS, ONCHAIN_COLUMNS
 from evaluation.targets import add_targets
 from features.pipeline import apply_feature_pipeline
 from models.arima_model import ImprovedARIMAModel
@@ -33,6 +33,9 @@ def _make_train_df(n: int = 260, seed: int = 42) -> pd.DataFrame:
         index=dates,
     )
     engineered = apply_feature_pipeline(df, dropna=False)
+    # Add synthetic cross-asset and on-chain features for testing
+    for col in CROSSASSET_COLUMNS + ONCHAIN_COLUMNS + MICROSTRUCTURE_COLUMNS:
+        engineered[col] = rng.randn(n)
     targeted = add_targets(engineered)
     return targeted.dropna()
 

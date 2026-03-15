@@ -1,18 +1,18 @@
 {
-  "model_name": "xgboost_direction",
-  "target_column": "target_direction_cost_adj",
+  "model_name": "lightgbm_direction",
+  "target_column": "target_direction_cost_adj_4h",
   "train_window": 4320,
   "test_window": 720,
   "windows_evaluated": 6,
   "scores": {
-    "directional_accuracy": 0.69375,
-    "precision": 0.21612677163718771,
-    "recall": 0.38038434755777534,
-    "f1": 0.24829040511246347,
-    "positive_rate": 0.2842592592592592,
-    "roc_auc": 0.6285484610105156,
-    "fit_accuracy": 0.885378086419753,
-    "fit_positive_rate": 0.12357253086419755
+    "directional_accuracy": 0.6780092592592594,
+    "precision": 0.48492327566471066,
+    "recall": 0.16981262097601027,
+    "f1": 0.20880090327859122,
+    "positive_rate": 0.1395833333333333,
+    "roc_auc": 0.5547944523061773,
+    "fit_accuracy": 0.7564429012345678,
+    "fit_positive_rate": 0.26396604938271606
   },
   "baseline_scores": {
     "persistence_price": {
@@ -48,6 +48,6 @@
       "roc_auc": 0.4998973282475537
     }
   },
-  "prediction_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/artifacts/xgboost_direction_predictions.csv",
-  "generated_at": "2026-03-15T13:38:39.514833+00:00"
+  "prediction_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/artifacts/phase12e_base_lightgbm_direction_predictions.csv",
+  "generated_at": "2026-03-15T13:37:46.932753+00:00"
 }

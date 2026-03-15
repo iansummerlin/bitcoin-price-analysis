@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from backtest import apply_features, generate_naive_predictions, run_backtest
-from config import DEFAULT_DIRECTION_TARGET_COLUMN
+from config import CROSSASSET_COLUMNS, DEFAULT_DIRECTION_TARGET_COLUMN, MICROSTRUCTURE_COLUMNS, ONCHAIN_COLUMNS
 from evaluation.targets import add_targets
 from evaluation.walk_forward import iter_walk_forward_slices, walk_forward_evaluate
 from signals.export import export_latest_signal, validate_signal_artifact
@@ -35,7 +35,11 @@ def _make_historical_df(n: int = 600, seed: int = 42) -> pd.DataFrame:
         },
         index=dates,
     )
-    return add_targets(apply_features(df))
+    featured = apply_features(df)
+    rng2 = np.random.RandomState(seed + 1)
+    for col in CROSSASSET_COLUMNS + ONCHAIN_COLUMNS + MICROSTRUCTURE_COLUMNS:
+        featured[col] = rng2.randn(len(featured))
+    return add_targets(featured)
 
 
 class TestBacktestCompatibilityHelpers(unittest.TestCase):

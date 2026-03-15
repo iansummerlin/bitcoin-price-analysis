@@ -1,0 +1,34 @@
+{
+  "with_crossasset": {
+    "label": "with_crossasset",
+    "include_crossasset": true,
+    "scores": {
+      "directional_accuracy": 0.6115740740740742,
+      "precision": 0.3657486332087361,
+      "recall": 0.35448082187806,
+      "f1": 0.2798421866284304,
+      "positive_rate": 0.3097222222222222,
+      "roc_auc": 0.5822774858311346,
+      "fit_accuracy": 0.7729552469135803,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows_evaluated": 6,
+    "dataset_rows": 8760
+  },
+  "without_crossasset": {
+    "label": "without_crossasset",
+    "include_crossasset": false,
+    "scores": {
+      "directional_accuracy": 0.6673611111111111,
+      "precision": 0.4822369967493807,
+      "recall": 0.21613853654817072,
+      "f1": 0.21100295877402817,
+      "positive_rate": 0.17662037037037037,
+      "roc_auc": 0.5636405731386619,
+      "fit_accuracy": 0.7649305555555556,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows_evaluated": 6,
+    "dataset_rows": 8760
+  }
+}

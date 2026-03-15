@@ -75,6 +75,53 @@ EXOG_COLUMNS = [
     "trend_regime_24",
     "trend_regime_72",
     "fng_value",
+    # Cross-asset features (Phase 12B).
+    "dxy_return_1d",
+    "dxy_return_5d",
+    "sp500_return_1d",
+    "btc_sp500_corr_30d",
+    "vix_level",
+    "vix_change_1d",
+    "gold_btc_ratio",
+    "gold_btc_ratio_zscore_30d",
+    "eth_btc_ratio",
+    "eth_btc_ratio_change_7d",
+    # On-chain features (Phase 12C).
+    "hashrate_change_24h",
+    "hashrate_change_7d",
+    "difficulty_change",
+    "tx_count_zscore_7d",
+    "tx_volume_zscore_7d",
+    "hashrate_price_divergence",
+    # Microstructure features (Phase 12E).
+    "funding_rate_8h",
+    "funding_rate_zscore_7d",
+    "funding_rate_cumulative_24h",
+]
+
+# Cross-asset feature columns (Phase 12B) — also listed separately for
+# ablation and conditional pipeline control.
+CROSSASSET_COLUMNS = [
+    "dxy_return_1d",
+    "dxy_return_5d",
+    "sp500_return_1d",
+    "btc_sp500_corr_30d",
+    "vix_level",
+    "vix_change_1d",
+    "gold_btc_ratio",
+    "gold_btc_ratio_zscore_30d",
+    "eth_btc_ratio",
+    "eth_btc_ratio_change_7d",
+]
+
+# On-chain feature columns (Phase 12C).
+ONCHAIN_COLUMNS = [
+    "hashrate_change_24h",
+    "hashrate_change_7d",
+    "difficulty_change",
+    "tx_count_zscore_7d",
+    "tx_volume_zscore_7d",
+    "hashrate_price_divergence",
 ]
 
 TRADING_CSV_COLUMNS = ["date", *OHLCV_COLUMNS, *EXOG_COLUMNS]
@@ -89,6 +136,16 @@ DEFAULT_FEE_PCT = 0.001
 DEFAULT_SLIPPAGE_PCT = 0.0005
 DEFAULT_COST_BUFFER_PCT = DEFAULT_FEE_PCT + DEFAULT_SLIPPAGE_PCT + 0.002
 
+# Multi-horizon configuration for Phase 12A.
+# Per-trade cost (fee + slippage) is constant regardless of holding period.
+# The buffer component is the same across horizons — the evaluation will show
+# whether longer horizons naturally produce larger moves that clear the bar.
+HORIZON_CONFIGS = {
+    1: {"cost_buffer": DEFAULT_COST_BUFFER_PCT, "actionable_threshold": DEFAULT_ACTIONABLE_THRESHOLD},
+    4: {"cost_buffer": DEFAULT_COST_BUFFER_PCT, "actionable_threshold": DEFAULT_ACTIONABLE_THRESHOLD},
+    24: {"cost_buffer": DEFAULT_COST_BUFFER_PCT, "actionable_threshold": DEFAULT_ACTIONABLE_THRESHOLD},
+}
+
 # Walk-forward defaults.
 DEFAULT_INITIAL_CAPITAL = 10_000.0
 DEFAULT_RISK_FREE_RATE = 0.04
@@ -100,6 +157,18 @@ DEFAULT_TRAIN_WINDOW = 24 * 180
 DEFAULT_TEST_WINDOW = 24 * 30
 DEFAULT_MIN_TRAIN_ROWS = 24 * 60
 DEFAULT_EVALUATION_MAX_ROWS = 24 * 365
+
+# Microstructure feature columns (Phase 12E).
+MICROSTRUCTURE_COLUMNS = [
+    "funding_rate_8h",
+    "funding_rate_zscore_7d",
+    "funding_rate_cumulative_24h",
+]
+
+# Cache TTLs (seconds) for external data sources.
+CACHE_TTL_CROSSASSET = 6 * 3600       # 6 hours — daily data, markets close at different times
+CACHE_TTL_ONCHAIN = 24 * 3600         # 24 hours — daily resolution
+CACHE_TTL_MICROSTRUCTURE = 1 * 3600   # 1 hour — funding rates update every 8h
 
 # Modeling defaults.
 DEFAULT_REGRESSION_MODEL = "xgboost_regressor"

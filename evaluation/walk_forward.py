@@ -19,6 +19,7 @@ from config import (
 from evaluation.baselines import add_baseline_predictions
 from evaluation.reporting import score_predictions
 from models.arima_model import ImprovedARIMAModel
+from models.lightgbm_model import LightGBMDirectionModel
 from models.xgboost_model import XGBoostDirectionModel, XGBoostPriceModel
 
 
@@ -26,6 +27,7 @@ MODEL_REGISTRY = {
     "arima_regressor": ImprovedARIMAModel,
     "xgboost_regressor": XGBoostPriceModel,
     "xgboost_direction": XGBoostDirectionModel,
+    "lightgbm_direction": LightGBMDirectionModel,
 }
 
 

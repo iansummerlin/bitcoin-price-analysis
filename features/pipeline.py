@@ -7,6 +7,7 @@ import pandas as pd
 
 from config import (
     ATR_WINDOW,
+    CROSSASSET_COLUMNS,
     EXOG_COLUMNS,
     LAGGED_CLOSE_PERIODS,
     MOVING_AVERAGE_PERIODS,
@@ -59,9 +60,20 @@ def apply_feature_pipeline(df: pd.DataFrame, dropna: bool = True) -> pd.DataFram
         features[f"trend_regime_{window}"] = np.sign(features["close"].diff(window))
 
     if dropna:
-        features = features.dropna(subset=EXOG_COLUMNS)
+        # Drop NaN on base features; cross-asset features may still have NaN
+        # at the start due to rolling windows — those are handled in build_dataset
+        drop_cols = [c for c in EXOG_COLUMNS if c in features.columns]
+        features = features.dropna(subset=drop_cols)
 
     return features
+
+
+def active_feature_columns() -> list[str]:
+    """Return the full ordered list of active feature columns.
+
+    Since Phase 12B, cross-asset features are included in EXOG_COLUMNS.
+    """
+    return list(EXOG_COLUMNS)
 
 
 def feature_columns() -> list[str]:

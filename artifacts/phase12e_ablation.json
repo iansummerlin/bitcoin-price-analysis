@@ -1,0 +1,92 @@
+{
+  "full_xgboost_direction": {
+    "label": "full",
+    "model": "xgboost_direction",
+    "scores": {
+      "directional_accuracy": 0.6152777777777777,
+      "precision": 0.3317055444233144,
+      "recall": 0.333691512004017,
+      "f1": 0.26144663906248106,
+      "positive_rate": 0.2972222222222222,
+      "roc_auc": 0.5865258795145862,
+      "fit_accuracy": 0.7733024691358025,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows": 6
+  },
+  "full_lightgbm_direction": {
+    "label": "full",
+    "model": "lightgbm_direction",
+    "scores": {
+      "directional_accuracy": 0.680787037037037,
+      "precision": 0.4253897281929318,
+      "recall": 0.17528839961277579,
+      "f1": 0.18185301003312346,
+      "positive_rate": 0.14375,
+      "roc_auc": 0.6026850867043557,
+      "fit_accuracy": 0.7646990740740741,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows": 6
+  },
+  "no_micro_xgboost_direction": {
+    "label": "no_micro",
+    "model": "xgboost_direction",
+    "scores": {
+      "directional_accuracy": 0.6155092592592593,
+      "precision": 0.3329810546273961,
+      "recall": 0.3364126004393912,
+      "f1": 0.2652171395107224,
+      "positive_rate": 0.29884259259259255,
+      "roc_auc": 0.5886118086230717,
+      "fit_accuracy": 0.7736111111111111,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows": 6
+  },
+  "no_micro_lightgbm_direction": {
+    "label": "no_micro",
+    "model": "lightgbm_direction",
+    "scores": {
+      "directional_accuracy": 0.6810185185185186,
+      "precision": 0.4276419804451841,
+      "recall": 0.1827713928100547,
+      "f1": 0.19247960460747449,
+      "positive_rate": 0.1486111111111111,
+      "roc_auc": 0.6034040269120177,
+      "fit_accuracy": 0.7647762345679013,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows": 6
+  },
+  "base_xgboost_direction": {
+    "label": "base",
+    "model": "xgboost_direction",
+    "scores": {
+      "directional_accuracy": 0.6638888888888889,
+      "precision": 0.37106480446870355,
+      "recall": 0.22474091915917402,
+      "f1": 0.2106258484962615,
+      "positive_rate": 0.18564814814814812,
+      "roc_auc": 0.5648166894853435,
+      "fit_accuracy": 0.7649305555555556,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows": 6
+  },
+  "base_lightgbm_direction": {
+    "label": "base",
+    "model": "lightgbm_direction",
+    "scores": {
+      "directional_accuracy": 0.6780092592592594,
+      "precision": 0.48492327566471066,
+      "recall": 0.16981262097601027,
+      "f1": 0.20880090327859122,
+      "positive_rate": 0.1395833333333333,
+      "roc_auc": 0.5547944523061773,
+      "fit_accuracy": 0.7564429012345678,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows": 6
+  }
+}

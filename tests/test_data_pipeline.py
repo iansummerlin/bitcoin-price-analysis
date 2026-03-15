@@ -57,7 +57,13 @@ class TestLoadersAndValidation(unittest.TestCase):
                 rows.append(f"2024-01-{1 + i // 24:02d} {i % 24:02d}:00:00,{100+i},{105+i},{95+i},{100+i},10,1000")
             price_path.write_text(long_price + "\n".join(rows) + "\n", encoding="utf-8")
             sentiment_path.write_text(SENTIMENT_CSV, encoding="utf-8")
-            dataset, metadata = build_dataset(price_path=price_path, sentiment_path=sentiment_path)
+            dataset, metadata = build_dataset(
+                price_path=price_path,
+                sentiment_path=sentiment_path,
+                include_crossasset=False,
+                include_onchain=False,
+                include_microstructure=False,
+            )
             self.assertGreater(len(dataset), 50)
             self.assertIn("target_direction_cost_adj", dataset.columns)
             self.assertEqual(metadata.market_source, "gemini_btcusd_spot_1h")

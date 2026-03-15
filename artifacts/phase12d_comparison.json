@@ -1,0 +1,41 @@
+{
+  "xgboost_direction": {
+    "scores": {
+      "directional_accuracy": 0.6185185185185185,
+      "precision": 0.34604016464984455,
+      "recall": 0.33660304781761613,
+      "f1": 0.2665062535767356,
+      "positive_rate": 0.2962962962962963,
+      "roc_auc": 0.5886235376690313,
+      "fit_accuracy": 0.7736111111111111,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows": 6
+  },
+  "lightgbm_direction": {
+    "scores": {
+      "directional_accuracy": 0.6810185185185186,
+      "precision": 0.4276419804451841,
+      "recall": 0.1827713928100547,
+      "f1": 0.19247960460747449,
+      "positive_rate": 0.1486111111111111,
+      "roc_auc": 0.6034040269120177,
+      "fit_accuracy": 0.7647762345679013,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows": 6
+  },
+  "xgboost_base": {
+    "scores": {
+      "directional_accuracy": 0.6689814814814814,
+      "precision": 0.4959660202305087,
+      "recall": 0.2192580203907225,
+      "f1": 0.21735737868934668,
+      "positive_rate": 0.17731481481481481,
+      "roc_auc": 0.566069154119779,
+      "fit_accuracy": 0.7649305555555556,
+      "fit_positive_rate": 0.26396604938271606
+    },
+    "windows": 6
+  }
+}

@@ -4,7 +4,7 @@
 
 A Bitcoin signal-generation and model-research repo. It does **not** place trades. It exists to answer whether a predictive signal survives realistic costs. The canonical plan and progress live in `ROADMAP.md`.
 
-**Current status:** research-only. The model does not clear the integration bar. The dataset is stale (ends July 2025).
+**Current status:** research-only. Phase 12 complete (data universe expanded, no new family individually validated as a signal source). Best known config: LightGBM, 4h horizon, 42 features. Clears 2 of 3 thresholds (ROC-AUC=0.603, recall=0.183) but precision=0.428 is below the 0.55 bar. Data last refreshed March 14, 2026.
 
 ---
 
@@ -76,7 +76,7 @@ data/         # loaders, validation, dataset assembly
 evaluation/   # targets, baselines, walk-forward, ablation, comparison,
               #   cost simulation (cost_model.py), signal rules (signal_rules.py)
 features/     # deterministic feature engineering pipeline
-models/       # model interface (base.py), ARIMA, XGBoost
+models/       # model interface (base.py), ARIMA, XGBoost, LightGBM
 signals/      # downstream signal export and validation
 scripts/      # CLI wrappers (compare, ablate, export)
 tests/        # unit + integration tests
@@ -94,6 +94,8 @@ config.py     # all shared constants, feature lists, thresholds
 - **Artifacts go in `artifacts/`** — model files, predictions, metadata, signal exports. Never commit stale artifacts without updating `dataset_metadata.json`.
 - **Backtest history is append-only** — `artifacts/backtest_history.json` is the source of truth. `BACKTEST.md` is auto-generated from it — never edit manually. Every `make backtest` run appends to history and regenerates the markdown.
 - **Targets are trading-aligned** — the default target is cost-adjusted direction, not raw price. See `evaluation/targets.py`.
+- **All external data sources must use the shared cache** — any loader that fetches from a remote API must go through `data/cache.py` with a defined TTL. No loader may bypass the cache or retry repeatedly on failure. On API failure, prefer stale cache over retries. Repeated `build_dataset()` calls within TTL must not hit the remote API.
+- **External data families are toggleable** — `build_dataset()` accepts `include_crossasset`, `include_onchain`, `include_microstructure` flags. When disabled, feature columns are filled with 0 (neutral) to maintain schema compatibility.
 
 ---
 
