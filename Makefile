@@ -1,4 +1,4 @@
-.PHONY: test train collect backtest regression-gate compare ablate export-signal setup
+.PHONY: test train collect backtest regression-gate compare ablate export-signal setup experiment
 
 # Run all tests
 test:
@@ -31,6 +31,10 @@ ablate:
 
 export-signal:
 	.venv/bin/python scripts/export_latest_signal.py
+
+# Run experiment loop (Phase 13)
+experiment:
+	.venv/bin/python scripts/experiment_loop.py
 
 # Setup environment
 setup:

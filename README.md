@@ -8,7 +8,7 @@ The canonical execution plan and progress tracker live in [ROADMAP.md](/home/ixn
 
 ## Current Judgment
 
-As of March 15, 2026, this repo is `research-only`, not a justified trading-strategy dependency. Phase 12 (data universe expansion) is complete. The best known configuration (LightGBM, 4h horizon, expanded features) clears 2 of 3 integration thresholds (ROC-AUC=0.603, recall=0.183) but precision (0.428) remains below the 0.55 bar. Run `make backtest` to generate `BACKTEST.md` with the latest metrics and history.
+As of March 15, 2026, this repo is `research-only`, not a justified trading-strategy dependency. Phase 12 (data universe expansion) is complete. Phase 13 (experiment loop) infrastructure is built — run `make experiment` to execute the full search. The best known configuration (LightGBM, 4h horizon, expanded features) clears 2 of 3 integration thresholds (ROC-AUC=0.603, recall=0.183) but precision (0.428) remains below the 0.55 bar. Run `make backtest` to generate `BACKTEST.md` with the latest metrics and history.
 
 ## Architecture
 

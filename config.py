@@ -170,6 +170,20 @@ CACHE_TTL_CROSSASSET = 6 * 3600       # 6 hours — daily data, markets close at
 CACHE_TTL_ONCHAIN = 24 * 3600         # 24 hours — daily resolution
 CACHE_TTL_MICROSTRUCTURE = 1 * 3600   # 1 hour — funding rates update every 8h
 
+# Phase 13: Held-out validation split.
+# Reserve the most recent 3 months of data as a final validation set.
+# The experiment loop must NEVER train on or evaluate against this period.
+# It is only used once, at the very end, to check if the best surviving
+# configuration generalizes.
+HELD_OUT_MONTHS = 3
+HELD_OUT_HOURS = HELD_OUT_MONTHS * 30 * 24  # ~2160 hours
+
+# Phase 13: Experiment loop budget.
+EXPERIMENT_BUDGET_MAX = 100
+EXPERIMENT_BUDGET_HOURS = 12
+EXPERIMENT_MIN_IMPROVEMENT = 0.005  # minimum metric improvement to keep a change
+EXPERIMENT_MAX_ADDED_LINES = 20  # max lines added without proportional gain
+
 # Modeling defaults.
 DEFAULT_REGRESSION_MODEL = "xgboost_regressor"
 DEFAULT_CLASSIFICATION_MODEL = "xgboost_direction"

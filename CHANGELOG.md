@@ -16,7 +16,7 @@ Add entries for:
 Do not use this as a full engineering diary. Prefer short entries linked to the
 relevant docs and commits.
 
-## 2026-03-15
+## 2026-03-15 (Phase 13 infrastructure)
 
 ### Added
 - Multi-horizon targets (1h/4h/24h) with horizon-scaled cost thresholds (Phase 12A)
@@ -32,3 +32,15 @@ relevant docs and commits.
 - `build_dataset()` accepts `include_crossasset`, `include_onchain`, `include_microstructure` flags
 - Model comparison now includes LightGBM alongside XGBoost and ARIMA
 - Best known config updated: LightGBM, 4h horizon, ROC-AUC=0.603, recall=0.183, precision=0.428
+
+### Added (Phase 13 infrastructure)
+- Experiment loop (`scripts/experiment_loop.py`): predefined search over hyperparameters and feature subsets
+- `program.md`: experiment loop documentation, metric, budget, held-out protocol
+- `AUTORESEARCH.md` report generation after each run
+- Held-out validation split config: last 3 months reserved, trained on all pre-held-out data
+- Checkpointing, stop-flag, Telegram progress notifications
+- `make experiment` target
+- 34 tests for experiment loop (composite metric, regime diversity, TSV round-trip, AUTORESEARCH.md, held-out isolation, end-to-end mini loop)
+
+### Fixed
+- Feature-subset baseline bug: kept experiments with custom feature columns now correctly refresh per-window scores for future regime-diversity comparisons
