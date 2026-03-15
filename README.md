@@ -8,7 +8,7 @@ The canonical execution plan and progress tracker live in [ROADMAP.md](/home/ixn
 
 ## Current Judgment
 
-As of March 15, 2026, this repo is `research-only`, not a justified trading-strategy dependency. Phase 12 (data universe expansion) is complete. Phase 13 (experiment loop) infrastructure is built — run `make experiment` to execute the full search. The best known configuration (LightGBM, 4h horizon, expanded features) clears 2 of 3 integration thresholds (ROC-AUC=0.603, recall=0.183) but precision (0.428) remains below the 0.55 bar. Run `make backtest` to generate `BACKTEST.md` with the latest metrics and history.
+As of March 15, 2026, this repo is `research-only`, not a justified trading-strategy dependency. Phase 12 (data universe expansion) is complete. Phase 13 has completed an initial full experiment-loop run and failed Gate 7 on held-out data. The best Phase 12 configuration (LightGBM, 4h horizon, expanded features) clears 2 of 3 integration thresholds (ROC-AUC=0.603, recall=0.183) but precision (0.428) remains below the 0.55 bar. The best Phase 13 search configuration improved the walk-forward composite metric but still failed held-out precision/recall thresholds. Run `make backtest` to generate `BACKTEST.md` and `make experiment` to regenerate `AUTORESEARCH.md`.
 
 ## Architecture
 
@@ -229,12 +229,12 @@ Historical 2025 outputs such as old plots and the legacy ARIMA pickle were remov
 
 - The dataset was last refreshed on March 14, 2026 (price through March 13, sentiment through March 14).
 - Phase 12 expanded the feature set to 42 features across 5 data families (price/volume, sentiment, cross-asset, on-chain, microstructure). No individual new data family showed clear measurable improvement — expanded data increases recall but degrades precision. The best configuration (LightGBM, 4h, full features) clears 2 of 3 thresholds but precision (0.428) remains below 0.55.
-- Data appears to be the main bottleneck for precision, but learner choice and feature selection still affect the tradeoff. Phase 13 (experiment loop) will search the expanded space systematically — including feature subsets, hyperparameters, and threshold tuning — before concluding whether the signal hypothesis should be abandoned.
+- Data appears to be the main bottleneck for precision, but learner choice, operating threshold, and feature selection still affect the tradeoff. The initial Phase 13 run found a higher-recall XGBoost configuration, but it did not generalize well enough on held-out data to justify promotion into the default code path. The next Phase 13 work should focus on precision-oriented threshold tuning and operating-point control, not generic hyperparameter drift.
 - `scripts/compare_models.py` exists for reproducible family comparison, but ARIMA evaluation is still materially slower than the tree-based path and should be treated as research tooling, not a fast daily check.
 
 ## Autonomous Experiment Loop — Limitations
 
-This repo uses (or will use) an autonomous AI experiment loop inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) to systematically search the feature/model/hyperparameter space. See Phase 13 in `ROADMAP.md` for full details. The following limitations apply:
+This repo uses an autonomous AI experiment loop inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) to systematically search the feature/model/hyperparameter space. See Phase 13 in `ROADMAP.md` for full details. The following limitations apply:
 
 **Overfitting risk.** Financial data is far noisier than LLM training data. A metric improvement on walk-forward windows may not generalize. The loop mitigates this with: a held-out validation set never seen during optimization, regime diversity checks (improvements must hold across multiple market conditions), and minimum improvement thresholds to filter noise.
 
@@ -242,10 +242,12 @@ This repo uses (or will use) an autonomous AI experiment loop inspired by [Karpa
 
 **Metric gaming.** An agent optimizing a single composite metric over many iterations will find configurations that score well on that metric but may not represent robust trading signals. The held-out validation set is the final check against this, but it can only be used once.
 
+**No automatic promotion.** The loop is evidence-generating only. It writes `results.tsv`, artifacts, and `AUTORESEARCH.md`, but it does not update `config.py`, model defaults, or export paths. Any winning configuration must be reviewed and promoted manually.
+
 **Compute cost.** Each experiment runs a full walk-forward evaluation (~10-15 minutes). Running 100 experiments takes ~20 hours. This is a meaningful compute commitment.
 
 **Not a replacement for domain reasoning.** The loop finds what works empirically but doesn't explain why. A feature that improves metrics could be capturing a real market dynamic or could be a coincidence in the evaluation window. Human review of the surviving experiments is still necessary before trusting the results for live trading.
 
 ## Decision
 
-This repo is a useful research and signal-export foundation, but not yet a genuinely useful production signal provider. Phase 12 (March 2026) expanded the data universe and identified 4h as the best prediction horizon, but no individual new data family showed clear measurable improvement. The best configuration (LightGBM, 4h, full features) clears 2 of 3 integration thresholds. Phase 13 is justified because Phase 12 created a richer search space and a better target — not because the new data families were validated as signal sources on their own. It should remain research-only until Phase 13 (experiment loop) has systematically searched the expanded space — or until that search concludes the signal hypothesis should be abandoned.
+This repo is a useful research and signal-export foundation, but not yet a genuinely useful production signal provider. Phase 12 (March 2026) expanded the data universe and identified 4h as the best prediction horizon, but no individual new data family showed clear measurable improvement. The initial Phase 13 run was worth doing and improved the walk-forward search metric, but Gate 7 still failed on held-out data. The repo should remain research-only while Phase 13 continues with a narrower precision-first objective: threshold calibration, probability-boundary tuning, and stricter operating-point review before any further model promotion is considered.

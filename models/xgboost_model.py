@@ -87,8 +87,13 @@ class XGBoostDirectionModel(BaseModel):
         max_depth: int = 3,
         learning_rate: float = 0.05,
         use_scaling: bool = True,
+        decision_threshold: float = 0.5,
     ):
-        super().__init__(feature_columns=feature_columns, use_scaling=use_scaling)
+        super().__init__(
+            feature_columns=feature_columns,
+            use_scaling=use_scaling,
+            decision_threshold=decision_threshold,
+        )
         if HAS_XGBOOST:
             self.model = XGBClassifier(
                 n_estimators=n_estimators,

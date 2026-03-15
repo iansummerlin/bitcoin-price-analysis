@@ -1,0 +1,103 @@
+run_id	experiment_id	model_name	composite_metric	precision	recall	roc_auc	f1	windows_evaluated	window_improvements	status	reason	description
+2026-03-15T16:39:26Z	0	xgboost_direction	0.035428	0.3029	0.1169	0.6032	0.1152	92	0	baseline	initial baseline	BASELINE: xgboost_direction default config
+2026-03-15T16:39:26Z	1	xgboost_direction	0.075360	0.2248	0.3352	0.5598	0.2329	92	85	keep	improvement +0.039932, 85/92 windows improved	xgb: n_est=50, max_d=6, lr=0.15
+2026-03-15T16:39:26Z	2	xgboost_direction	0.000446	0.0853	0.0052	0.6173	0.0083	92	1	discard	insufficient improvement (-0.074915 < 0.005)	xgb: n_est=100, max_d=3, lr=0.01
+2026-03-15T16:39:26Z	3	xgboost_direction	0.035428	0.3029	0.1169	0.6032	0.1152	92	5	discard	insufficient improvement (-0.039932 < 0.005)	xgb: n_est=100, max_d=3, lr=0.05
+2026-03-15T16:39:26Z	4	xgboost_direction	0.059837	0.2486	0.2407	0.5848	0.1769	92	23	discard	insufficient improvement (-0.015523 < 0.005)	xgb: n_est=100, max_d=3, lr=0.1
+2026-03-15T16:39:26Z	5	xgboost_direction	0.003320	0.2084	0.0159	0.5937	0.0234	92	0	discard	insufficient improvement (-0.072040 < 0.005)	xgb: n_est=100, max_d=5, lr=0.01
+2026-03-15T16:39:26Z	6	xgboost_direction	0.063771	0.2760	0.2311	0.5766	0.1801	92	18	discard	insufficient improvement (-0.011589 < 0.005)	xgb: n_est=100, max_d=5, lr=0.05
+2026-03-15T16:39:26Z	7	xgboost_direction	0.079201	0.2415	0.3279	0.5655	0.2264	92	50	discard	insufficient improvement (+0.003841 < 0.005)	xgb: n_est=100, max_d=5, lr=0.1
+2026-03-15T16:39:26Z	8	xgboost_direction	0.016869	0.2839	0.0594	0.6099	0.0637	92	3	discard	insufficient improvement (-0.058491 < 0.005)	xgb: n_est=300, max_d=3, lr=0.01
+2026-03-15T16:39:26Z	9	xgboost_direction	0.076011	0.2719	0.2795	0.5814	0.2015	92	41	discard	insufficient improvement (+0.000651 < 0.005)	xgb: n_est=300, max_d=3, lr=0.05
+2026-03-15T16:39:26Z	10	xgboost_direction	0.094462	0.2394	0.3945	0.5625	0.2412	92	65	keep	improvement +0.019102, 65/92 windows improved	xgb: n_est=300, max_d=3, lr=0.1
+2026-03-15T16:39:26Z	11	xgboost_direction	0.038059	0.2848	0.1336	0.5854	0.1276	92	5	discard	insufficient improvement (-0.056403 < 0.005)	xgb: n_est=300, max_d=5, lr=0.01
+2026-03-15T16:39:26Z	12	xgboost_direction	0.090141	0.2366	0.3810	0.5610	0.2436	92	46	discard	insufficient improvement (-0.004321 < 0.005)	xgb: n_est=300, max_d=5, lr=0.05
+2026-03-15T16:39:26Z	13	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	57	keep	improvement +0.005194, 57/92 windows improved	xgb: n_est=300, max_d=5, lr=0.1
+2026-03-15T16:39:26Z	14	xgboost_direction	0.079158	0.2470	0.3204	0.5711	0.2216	92	20	discard	insufficient improvement (-0.020498 < 0.005)	xgb: n_est=500, max_d=4, lr=0.03
+2026-03-15T16:39:26Z	15	lightgbm_direction	0.034001	0.3468	0.0981	0.5860	0.1197	92	3	discard	insufficient improvement (-0.065655 < 0.005)	lgbm: n_est=50, max_d=-1, lr=0.1, leaves=63
+2026-03-15T16:39:26Z	16	lightgbm_direction	0.000023	0.0247	0.0009	0.6275	0.0018	92	0	discard	insufficient improvement (-0.099633 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.01, leaves=15
+2026-03-15T16:39:26Z	17	lightgbm_direction	0.000023	0.0247	0.0009	0.6275	0.0018	92	0	discard	insufficient improvement (-0.099633 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.01, leaves=31
+2026-03-15T16:39:26Z	18	lightgbm_direction	0.007794	0.2243	0.0347	0.6228	0.0468	92	2	discard	insufficient improvement (-0.091862 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.05, leaves=15
+2026-03-15T16:39:26Z	19	lightgbm_direction	0.007794	0.2243	0.0347	0.6228	0.0468	92	2	discard	insufficient improvement (-0.091862 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.05, leaves=31
+2026-03-15T16:39:26Z	20	lightgbm_direction	0.018755	0.2727	0.0688	0.6089	0.0801	92	1	discard	insufficient improvement (-0.080901 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.1, leaves=15
+2026-03-15T16:39:26Z	21	lightgbm_direction	0.018755	0.2727	0.0688	0.6089	0.0801	92	1	discard	insufficient improvement (-0.080901 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.1, leaves=31
+2026-03-15T16:39:26Z	22	lightgbm_direction	0.000140	0.0613	0.0023	0.6229	0.0043	92	0	discard	insufficient improvement (-0.099516 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.01, leaves=15
+2026-03-15T16:39:26Z	23	lightgbm_direction	0.000238	0.0731	0.0033	0.6171	0.0060	92	0	discard	insufficient improvement (-0.099418 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.01, leaves=31
+2026-03-15T16:39:26Z	24	lightgbm_direction	0.016830	0.2956	0.0569	0.6132	0.0715	92	1	discard	insufficient improvement (-0.082826 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.05, leaves=15
+2026-03-15T16:39:26Z	25	lightgbm_direction	0.019267	0.3136	0.0614	0.6081	0.0786	92	2	discard	insufficient improvement (-0.080389 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.05, leaves=31
+2026-03-15T16:39:26Z	26	lightgbm_direction	0.026232	0.2781	0.0943	0.5947	0.1072	92	0	discard	insufficient improvement (-0.073424 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.1, leaves=15
+2026-03-15T16:39:26Z	27	lightgbm_direction	0.030189	0.2988	0.1010	0.5896	0.1161	92	1	discard	insufficient improvement (-0.069467 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.1, leaves=31
+2026-03-15T16:39:26Z	28	lightgbm_direction	0.000060	0.0370	0.0016	0.6226	0.0030	92	0	discard	insufficient improvement (-0.099596 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.01, leaves=15
+2026-03-15T16:39:26Z	29	lightgbm_direction	0.000182	0.0680	0.0027	0.6149	0.0050	92	0	discard	insufficient improvement (-0.099473 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.01, leaves=31
+2026-03-15T16:39:26Z	30	lightgbm_direction	0.011880	0.2569	0.0462	0.6124	0.0634	92	0	discard	insufficient improvement (-0.087776 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.05, leaves=15
+2026-03-15T16:39:26Z	31	lightgbm_direction	0.021253	0.3281	0.0648	0.6004	0.0847	92	1	discard	insufficient improvement (-0.078403 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.05, leaves=31
+2026-03-15T16:39:26Z	32	lightgbm_direction	0.025417	0.3044	0.0835	0.5908	0.1030	92	1	discard	insufficient improvement (-0.074238 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.1, leaves=15
+2026-03-15T16:39:26Z	33	lightgbm_direction	0.028087	0.2584	0.1087	0.5860	0.1233	92	1	discard	insufficient improvement (-0.071568 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.1, leaves=31
+2026-03-15T16:39:26Z	34	lightgbm_direction	0.002870	0.2046	0.0140	0.6286	0.0237	92	0	discard	insufficient improvement (-0.096786 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.01, leaves=15
+2026-03-15T16:39:26Z	35	lightgbm_direction	0.002870	0.2046	0.0140	0.6286	0.0237	92	0	discard	insufficient improvement (-0.096786 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.01, leaves=31
+2026-03-15T16:39:26Z	36	lightgbm_direction	0.025262	0.2953	0.0855	0.6000	0.0964	92	1	discard	insufficient improvement (-0.074394 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.05, leaves=15
+2026-03-15T16:39:26Z	37	lightgbm_direction	0.025262	0.2953	0.0855	0.6000	0.0964	92	1	discard	insufficient improvement (-0.074394 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.05, leaves=31
+2026-03-15T16:39:26Z	38	lightgbm_direction	0.041043	0.3050	0.1346	0.5809	0.1366	92	4	discard	insufficient improvement (-0.058613 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.1, leaves=15
+2026-03-15T16:39:26Z	39	lightgbm_direction	0.041043	0.3050	0.1346	0.5809	0.1366	92	4	discard	insufficient improvement (-0.058613 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.1, leaves=31
+2026-03-15T16:39:26Z	40	lightgbm_direction	0.008341	0.2658	0.0314	0.6228	0.0451	92	2	discard	insufficient improvement (-0.091315 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.01, leaves=15
+2026-03-15T16:39:26Z	41	lightgbm_direction	0.009607	0.2888	0.0333	0.6156	0.0473	92	1	discard	insufficient improvement (-0.090049 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.01, leaves=31
+2026-03-15T16:39:26Z	42	lightgbm_direction	0.031200	0.2837	0.1100	0.5883	0.1206	92	4	discard	insufficient improvement (-0.068456 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.05, leaves=15
+2026-03-15T16:39:26Z	43	lightgbm_direction	0.031439	0.2735	0.1149	0.5819	0.1255	92	3	discard	insufficient improvement (-0.068217 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.05, leaves=31
+2026-03-15T16:39:26Z	44	lightgbm_direction	0.038352	0.2589	0.1481	0.5731	0.1480	92	3	discard	insufficient improvement (-0.061304 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.1, leaves=15
+2026-03-15T16:39:26Z	45	lightgbm_direction	0.038745	0.2497	0.1552	0.5690	0.1513	92	4	discard	insufficient improvement (-0.060911 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.1, leaves=31
+2026-03-15T16:39:26Z	46	lightgbm_direction	0.007278	0.2789	0.0261	0.6204	0.0390	92	2	discard	insufficient improvement (-0.092378 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.01, leaves=15
+2026-03-15T16:39:26Z	47	lightgbm_direction	0.010468	0.2788	0.0376	0.6106	0.0546	92	1	discard	insufficient improvement (-0.089188 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.01, leaves=31
+2026-03-15T16:39:26Z	48	lightgbm_direction	0.027672	0.2820	0.0981	0.5881	0.1125	92	1	discard	insufficient improvement (-0.071984 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.05, leaves=15
+2026-03-15T16:39:26Z	49	lightgbm_direction	0.030588	0.2827	0.1082	0.5786	0.1231	92	3	discard	insufficient improvement (-0.069068 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.05, leaves=31
+2026-03-15T16:39:26Z	50	lightgbm_direction	0.031461	0.2397	0.1312	0.5691	0.1369	92	1	discard	insufficient improvement (-0.068195 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.1, leaves=15
+2026-03-15T16:39:26Z	51	lightgbm_direction	0.031073	0.2390	0.1300	0.5717	0.1378	92	4	discard	insufficient improvement (-0.068583 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.1, leaves=31
+2026-03-15T16:39:26Z	52	lightgbm_direction	0.033163	0.3156	0.1051	0.5915	0.1167	92	3	discard	insufficient improvement (-0.066493 < 0.005)	lgbm: n_est=500, max_d=4, lr=0.03, leaves=31
+2026-03-15T16:39:26Z	53	xgboost_direction	0.038191	0.2456	0.1555	0.5858	0.1348	92	1	discard	insufficient improvement (-0.061465 < 0.005)	xgb: remove cross-asset features
+2026-03-15T16:39:26Z	54	lightgbm_direction	0.018497	0.3596	0.0514	0.6041	0.0694	92	1	discard	insufficient improvement (-0.081159 < 0.005)	lgbm: remove cross-asset features
+2026-03-15T16:39:26Z	55	xgboost_direction	0.058672	0.2617	0.2242	0.5877	0.1759	92	13	discard	insufficient improvement (-0.040983 < 0.005)	xgb: remove on-chain features
+2026-03-15T16:39:26Z	56	lightgbm_direction	0.022038	0.3027	0.0728	0.6115	0.0830	92	2	discard	insufficient improvement (-0.077618 < 0.005)	lgbm: remove on-chain features
+2026-03-15T16:39:26Z	57	xgboost_direction	0.063349	0.2869	0.2208	0.5891	0.1722	92	8	discard	insufficient improvement (-0.036306 < 0.005)	xgb: remove microstructure features
+2026-03-15T16:39:26Z	58	lightgbm_direction	0.018894	0.2936	0.0644	0.6101	0.0771	92	2	discard	insufficient improvement (-0.080762 < 0.005)	lgbm: remove microstructure features
+2026-03-15T16:39:26Z	59	xgboost_direction	0.044842	0.2980	0.1505	0.5885	0.1325	92	8	discard	insufficient improvement (-0.054814 < 0.005)	xgb: price+sentiment only (no new families)
+2026-03-15T16:39:26Z	60	lightgbm_direction	0.019325	0.3409	0.0567	0.6063	0.0722	92	0	discard	insufficient improvement (-0.080331 < 0.005)	lgbm: price+sentiment only (no new families)
+2026-03-15T16:39:26Z	61	lightgbm_direction	0.019564	0.2923	0.0669	0.6103	0.0784	92	1	discard	insufficient improvement (-0.080092 < 0.005)	lgbm: drop close_lag_1
+2026-03-15T16:39:26Z	62	lightgbm_direction	0.018894	0.2825	0.0669	0.6103	0.0795	92	2	discard	insufficient improvement (-0.080762 < 0.005)	lgbm: drop close_lag_6
+2026-03-15T16:39:26Z	63	lightgbm_direction	0.017376	0.2843	0.0611	0.6109	0.0749	92	1	discard	insufficient improvement (-0.082280 < 0.005)	lgbm: drop close_lag_24
+2026-03-15T16:39:26Z	64	lightgbm_direction	0.018711	0.2846	0.0658	0.6093	0.0786	92	1	discard	insufficient improvement (-0.080945 < 0.005)	lgbm: drop close_lag_90
+2026-03-15T16:39:26Z	65	lightgbm_direction	0.018844	0.2969	0.0635	0.6128	0.0750	92	2	discard	insufficient improvement (-0.080812 < 0.005)	lgbm: drop close_lag_120
+2026-03-15T16:39:26Z	66	lightgbm_direction	0.017693	0.2741	0.0645	0.6092	0.0763	92	0	discard	insufficient improvement (-0.081962 < 0.005)	lgbm: drop return_1
+2026-03-15T16:39:26Z	67	lightgbm_direction	0.017005	0.2868	0.0593	0.6097	0.0731	92	1	discard	insufficient improvement (-0.082651 < 0.005)	lgbm: drop return_24
+2026-03-15T16:39:26Z	68	lightgbm_direction	0.019217	0.2930	0.0656	0.6108	0.0781	92	2	discard	insufficient improvement (-0.080439 < 0.005)	lgbm: drop log_return_1
+2026-03-15T16:39:26Z	69	lightgbm_direction	0.018250	0.2862	0.0638	0.6111	0.0764	92	1	discard	insufficient improvement (-0.081406 < 0.005)	lgbm: drop MA_7
+2026-03-15T16:39:26Z	70	lightgbm_direction	0.018849	0.2967	0.0635	0.6090	0.0773	92	1	discard	insufficient improvement (-0.080807 < 0.005)	lgbm: drop MA_24
+2026-03-15T16:39:26Z	71	lightgbm_direction	0.017462	0.2685	0.0650	0.6103	0.0764	92	1	discard	insufficient improvement (-0.082194 < 0.005)	lgbm: drop MA_72
+2026-03-15T16:39:26Z	72	lightgbm_direction	0.019216	0.2894	0.0664	0.6101	0.0783	92	1	discard	insufficient improvement (-0.080440 < 0.005)	lgbm: drop ma_spread_7_24
+2026-03-15T16:39:26Z	73	lightgbm_direction	0.018427	0.2939	0.0627	0.6101	0.0759	92	1	discard	insufficient improvement (-0.081229 < 0.005)	lgbm: drop ma_spread_24_72
+2026-03-15T16:39:26Z	74	lightgbm_direction	0.019451	0.3014	0.0645	0.6104	0.0772	92	1	discard	insufficient improvement (-0.080205 < 0.005)	lgbm: drop rsi
+2026-03-15T16:39:26Z	75	lightgbm_direction	0.019804	0.3072	0.0645	0.6107	0.0776	92	0	discard	insufficient improvement (-0.079852 < 0.005)	lgbm: drop volatility_24
+2026-03-15T16:39:26Z	76	lightgbm_direction	0.020399	0.3024	0.0675	0.6113	0.0790	92	2	discard	insufficient improvement (-0.079257 < 0.005)	lgbm: drop volatility_ewma_24
+2026-03-15T16:39:26Z	77	lightgbm_direction	0.018520	0.2722	0.0680	0.6063	0.0797	92	2	discard	insufficient improvement (-0.081136 < 0.005)	lgbm: drop parkinson_volatility
+2026-03-15T16:39:26Z	78	lightgbm_direction	0.018801	0.2957	0.0636	0.6102	0.0747	92	2	discard	insufficient improvement (-0.080855 < 0.005)	lgbm: drop atr_24
+2026-03-15T16:39:26Z	79	lightgbm_direction	0.018522	0.2931	0.0632	0.6073	0.0750	92	2	discard	insufficient improvement (-0.081134 < 0.005)	lgbm: drop atr_pct
+2026-03-15T16:39:26Z	80	lightgbm_direction	0.020064	0.2934	0.0684	0.6092	0.0801	92	1	discard	insufficient improvement (-0.079592 < 0.005)	lgbm: drop volume_btc_zscore_24
+2026-03-15T16:39:26Z	81	lightgbm_direction	0.018229	0.2790	0.0653	0.6103	0.0785	92	2	discard	insufficient improvement (-0.081427 < 0.005)	lgbm: drop volume_usd_zscore_24
+2026-03-15T16:39:26Z	82	lightgbm_direction	0.018894	0.2936	0.0644	0.6102	0.0771	92	2	discard	insufficient improvement (-0.080762 < 0.005)	lgbm: drop trend_regime_24
+2026-03-15T16:39:26Z	83	lightgbm_direction	0.019418	0.3023	0.0642	0.6101	0.0766	92	2	discard	insufficient improvement (-0.080238 < 0.005)	lgbm: drop trend_regime_72
+2026-03-15T16:39:26Z	84	lightgbm_direction	0.021390	0.3121	0.0685	0.6114	0.0803	92	1	discard	insufficient improvement (-0.078266 < 0.005)	lgbm: drop fng_value
+2026-03-15T16:39:26Z	85	lightgbm_direction	0.019672	0.3022	0.0651	0.6101	0.0774	92	1	discard	insufficient improvement (-0.079984 < 0.005)	lgbm: drop dxy_return_1d
+2026-03-15T16:39:26Z	86	lightgbm_direction	0.019328	0.2886	0.0670	0.6104	0.0798	92	3	discard	insufficient improvement (-0.080328 < 0.005)	lgbm: drop dxy_return_5d
+2026-03-15T16:39:26Z	87	lightgbm_direction	0.017412	0.2693	0.0646	0.6092	0.0760	92	2	discard	insufficient improvement (-0.082244 < 0.005)	lgbm: drop sp500_return_1d
+2026-03-15T16:39:26Z	88	lightgbm_direction	0.017591	0.2810	0.0626	0.6097	0.0761	92	3	discard	insufficient improvement (-0.082065 < 0.005)	lgbm: drop btc_sp500_corr_30d
+2026-03-15T16:39:26Z	89	lightgbm_direction	0.017853	0.2776	0.0643	0.6113	0.0774	92	1	discard	insufficient improvement (-0.081803 < 0.005)	lgbm: drop vix_level
+2026-03-15T16:39:26Z	90	lightgbm_direction	0.019594	0.2881	0.0680	0.6099	0.0789	92	1	discard	insufficient improvement (-0.080062 < 0.005)	lgbm: drop vix_change_1d
+2026-03-15T16:39:26Z	91	lightgbm_direction	0.016842	0.2858	0.0589	0.6099	0.0773	92	1	discard	insufficient improvement (-0.082814 < 0.005)	lgbm: drop gold_btc_ratio
+2026-03-15T16:39:26Z	92	lightgbm_direction	0.017960	0.2823	0.0636	0.6107	0.0760	92	0	discard	insufficient improvement (-0.081696 < 0.005)	lgbm: drop gold_btc_ratio_zscore_30d
+2026-03-15T16:39:26Z	93	lightgbm_direction	0.020871	0.3273	0.0638	0.6086	0.0774	92	3	discard	insufficient improvement (-0.078785 < 0.005)	lgbm: drop eth_btc_ratio
+2026-03-15T16:39:26Z	94	lightgbm_direction	0.020627	0.2959	0.0697	0.6093	0.0825	92	2	discard	insufficient improvement (-0.079029 < 0.005)	lgbm: drop eth_btc_ratio_change_7d
+2026-03-15T16:39:26Z	95	lightgbm_direction	0.018088	0.2860	0.0632	0.6099	0.0765	92	2	discard	insufficient improvement (-0.081568 < 0.005)	lgbm: drop hashrate_change_24h
+2026-03-15T16:39:26Z	96	lightgbm_direction	0.018926	0.2935	0.0645	0.6088	0.0770	92	3	discard	insufficient improvement (-0.080730 < 0.005)	lgbm: drop hashrate_change_7d
+2026-03-15T16:39:26Z	97	lightgbm_direction	0.017438	0.2765	0.0631	0.6099	0.0761	92	2	discard	insufficient improvement (-0.082218 < 0.005)	lgbm: drop difficulty_change
+2026-03-15T16:39:26Z	98	lightgbm_direction	0.018979	0.2901	0.0654	0.6098	0.0763	92	2	discard	insufficient improvement (-0.080676 < 0.005)	lgbm: drop tx_count_zscore_7d
+2026-03-15T16:39:26Z	99	lightgbm_direction	0.019140	0.2924	0.0655	0.6099	0.0768	92	1	discard	insufficient improvement (-0.080515 < 0.005)	lgbm: drop tx_volume_zscore_7d
+2026-03-15T16:39:26Z	100	lightgbm_direction	0.019236	0.2937	0.0655	0.6113	0.0750	92	1	discard	insufficient improvement (-0.080420 < 0.005)	lgbm: drop hashrate_price_divergence
+2026-03-15T16:39:26Z	999	xgboost_direction	0.024224	0.4074	0.0595	0.7033	0.1038	1	0	held_out_final	final validation	HELD-OUT: xgb: n_est=300, max_d=5, lr=0.1

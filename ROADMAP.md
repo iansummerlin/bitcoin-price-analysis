@@ -5,7 +5,7 @@
 - Owner intent: turn this repository into a reliable **Bitcoin signal-generation and model-research repo** for a separate trading strategy/execution repository.
 - Audience: a fresh engineering agent with zero prior context.
 - Primary constraint: this repo should prove whether it can produce a usable predictive signal. It should not become an execution bot.
-- Current date context: this roadmap was last updated on March 14, 2026. Data was refreshed through March 13, 2026.
+- Current date context: this roadmap was last updated on March 15, 2026. Data was refreshed through March 13, 2026.
 
 ## Progress Tracker
 
@@ -50,7 +50,10 @@ Use these checkboxes to track progress directly in this file.
 - **12F dynamic features:** Skipped — no data family showed clear measurable improvement, so full contract redesign was not needed.
 - **Best known configuration:** LightGBM with full expanded features on 4h horizon — ROC-AUC=0.603, recall=0.183, precision=0.428. Clears 2 of 3 integration thresholds. Precision gap (0.428 vs 0.55 needed) is the remaining bottleneck.
 - **Note for Phase 13:** some sub-phase comparisons had minor baseline drift due to evolving evaluation setups (e.g. cross-asset data affected row counts slightly across runs). Phase 13 should keep comparisons tightly standardized — identical dataset, identical splits, identical evaluation slice for every experiment pair.
-- **Phase 13 infrastructure** completed on March 15, 2026. Experiment loop (`scripts/experiment_loop.py`), research directives (`program.md`), held-out validation split (last 3 months, 2160 hours), composite metric (precision × recall), safety rails, and `make experiment` target are all in place. Partial validation run confirmed keep/discard logic works (103 experiments queued, 92 walk-forward windows per experiment). Full overnight run pending.
+- **Phase 13 infrastructure** completed on March 15, 2026. Experiment loop (`scripts/experiment_loop.py`), research directives (`program.md`), held-out validation split (last 3 months, 2160 hours), composite metric (precision × recall), safety rails, and `make experiment` target are all in place.
+- **Phase 13 initial full run** completed on March 15, 2026. 100 experiments were evaluated in 284.3 minutes; 3 were kept and 97 discarded. The best surviving walk-forward configuration was `xgb: n_est=300, max_d=5, lr=0.1` with composite=0.099656, precision=0.2248, recall=0.4433, ROC-AUC=0.5521.
+- **Phase 13 held-out result:** FAIL. On the held-out set, the best surviving configuration achieved precision=0.4074, recall=0.0595, ROC-AUC=0.7033. This clears ROC-AUC but fails precision and recall thresholds, so the repo remains research-only.
+- **Interpretation:** the loop improved the search metric but did not produce a deployable operating point. The next Phase 13 work should focus on precision-oriented threshold tuning and probability-boundary calibration, not on promoting the current best config into repo defaults.
 
 ### What blocks progress now
 
@@ -58,7 +61,7 @@ The foundation infrastructure (Phases 0–10) is solid. The three blockers are:
 
 1. ~~**Stale data**~~ — resolved March 14, 2026. Dataset now extends through March 13, 2026.
 2. **Narrow data universe** — the model only sees price-derived technical indicators and a single sentiment index. These are lagging, widely available, and largely priced in. The market has this information already. Fresh data confirmed this: recall improved to 0.261 (above threshold) but precision dropped to 0.169 (far below 0.55). The model detects moves but can't filter noise from signal with current features. Reaching the integration bar almost certainly requires data sources the market hasn't fully absorbed: on-chain metrics, cross-asset signals, order flow / microstructure data.
-3. **Unexplored search space** — even with better data, the combination of features, hyperparameters, target thresholds, and model architectures is too large for manual exploration.
+3. **Unexplored search space** — even with better data, the combination of features, hyperparameters, target thresholds, and model architectures is too large for manual exploration. The broad search has now been exercised once; the remaining high-value gap is operating-point search with an explicit precision focus.
 
 Phase 11 (data refresh) is complete. Phase 12 expands what the model can see. Phase 13 systematically searches the expanded space.
 
@@ -87,13 +90,13 @@ If you are a fresh agent with no other context, start in this order:
 2. Read `README.md` and confirm it matches the roadmap.
 3. Check the Progress Tracker above. Phases 0–10 are complete (except one remaining Phase 5 item). The current work is Phases 11, 12, and 13.
 4. Phase 11 (data refresh) is complete. Data now extends through March 13, 2026.
-5. Start with **Phase 12: Rebuild the Information Set and Prediction Framing**. This is the biggest remaining phase and the one most likely to determine whether the repo succeeds or fails. It is internally staged — start with 12A (problem framing check), not with data integration.
-6. After Phase 12 delivers new data sources and a data-backed horizon decision, move to **Phase 13: Autonomous Experiment Loop** to systematically search the expanded space.
-7. The remaining Phase 5 item (remove weak features) will be handled automatically by the experiment loop in Phase 13.
+5. Treat **Phase 12** as complete. The repo now has a richer information set, a 4h target decision, and a larger feature/model search space.
+6. Continue with **Phase 13: Autonomous Experiment Loop**, but do so narrowly: prioritize target-threshold tuning, probability-threshold tuning, and precision-oriented operating-point selection before more generic hyperparameter search.
+7. The remaining Phase 5 item (remove weak features) can still be informed by Phase 13 evidence, but Phase 13 should not auto-promote winning configs into repo defaults.
 
 If unsure what the next practical task is, the default next task is:
 
-- **Phase 12A** — add multi-timeframe targets (4h, 24h), run walk-forward on all three horizons with the existing feature set, and determine which horizon to optimise for.
+- **Phase 13 threshold search** — tune the actionable threshold / cost buffer and classification decision boundary with an explicit goal of improving held-out precision without collapsing recall below the acceptance bar.
 
 ---
 
@@ -1350,18 +1353,18 @@ This ensures results are comparable across sub-phases. Do not change the model, 
 - [x] Feature engineering: add, remove, or modify features in `features/pipeline.py` and `config.py`. — individual feature removal experiments included.
 - [x] Feature selection: enable/disable feature families from Phase 12 (on-chain, cross-asset, microstructure). — family ablation experiments included.
 - [x] Hyperparameter tuning: modify model parameters across all model families (XGBoost, LightGBM, CatBoost, ensemble). — XGBoost and LightGBM hyperparameter grid included (CatBoost not added in Phase 12).
-- [ ] Target threshold tuning: adjust cost buffer, actionable move threshold, prediction timeframe in `config.py`. — deferred to full run.
-- [ ] Probability threshold tuning: adjust classification decision boundary. — deferred to full run.
+- [x] Target threshold tuning: adjust cost buffer, actionable move threshold, prediction timeframe in `config.py`. — actionable-threshold and cost-buffer search added to the experiment loop.
+- [x] Probability threshold tuning: adjust classification decision boundary. — decision-threshold search added to the experiment loop.
 - [x] Model selection: switch between or combine Phase 12 model families. — both XGBoost and LightGBM evaluated.
 - [ ] New model architectures: add new model classes in `models/` that conform to the `BaseModel` interface. — not attempted; existing families sufficient for search.
 
 #### Validation
 
-- [x] Run the experiment loop end-to-end on at least one full cycle and confirm keep/discard logic works. — partial run confirmed: baseline established, keep/discard logic working, results.tsv populated correctly.
-- [x] Confirm `results.tsv` accurately logs all experiments with correct metrics. — verified in partial run.
+- [x] Run the experiment loop end-to-end on at least one full cycle and confirm keep/discard logic works. — full run completed: 100 experiments, 3 kept, 97 discarded.
+- [x] Confirm `results.tsv` accurately logs all experiments with correct metrics. — verified in the completed run.
 - [x] Confirm the held-out validation set was never used during the experiment loop. — held-out split at row 70797, experiment loop only uses rows 0–70796.
-- [ ] Evaluate the best surviving configuration on the held-out set and record final metrics. — blocked on full experiment run.
-- [ ] If final metrics clear the integration bar, update the progress tracker and gate results. — blocked on full experiment run.
+- [x] Evaluate the best surviving configuration on the held-out set and record final metrics. — complete; held-out precision=0.4074, recall=0.0595, ROC-AUC=0.7033.
+- [x] If final metrics clear the integration bar, update the progress tracker and gate results. — complete; Gate 7 failed, repo remains research-only.
 
 ### Objective
 
@@ -1370,6 +1373,8 @@ Systematically explore the feature/hyperparameter/target search space using an a
 ### Why this phase exists
 
 After Phase 12 expands the data universe and model roster, the search space is large: dozens of features across multiple data families × hyperparameter grids × target thresholds × multiple model architectures. That is too large for manual exploration. An autonomous loop can run ~12 experiments/hour, covering overnight what would take weeks of manual iteration.
+
+After the first full run, the remaining value is no longer broad model shopping. The highest-value unresolved question is whether a better operating point can recover enough precision on held-out data without destroying recall.
 
 ### How it works
 
@@ -1397,6 +1402,12 @@ The search space includes:
 - Individual feature removal (drop each of 42 features one at a time)
 - Total: ~103 experiments, ~5 minutes each, ~8-9 hours end to end
 
+The next search revision should prioritize:
+- probability-threshold tuning for classification outputs,
+- actionable-threshold / cost-buffer tuning,
+- precision-constrained selection rules (for example: maximize precision subject to recall >= 0.15),
+- only then additional hyperparameter expansion.
+
 ### Critical design constraints
 
 These exist because financial data is fundamentally different from LLM training data:
@@ -1408,6 +1419,8 @@ These exist because financial data is fundamentally different from LLM training 
 3. **Complexity has a cost.** Unlike LLM training where a 0.001 improvement is always real, a 0.005 improvement in crypto signal metrics could be noise. The minimum improvement threshold and complexity budget prevent the loop from accumulating fragile micro-optimizations.
 
 4. **The evaluation harness is never modified.** The loop can change what goes into the model (features, parameters) but never how the model is judged (walk-forward splits, cost model, baselines, metrics). This is the key invariant that makes the results trustworthy.
+
+5. **Winning configs are not auto-promoted.** The loop produces evidence, not codebase mutations. Any promotion into `config.py`, training defaults, or export paths must be a manual review step performed after stronger-model or human validation.
 
 ### Scope boundaries
 
@@ -1448,6 +1461,8 @@ file for the current contents.
 - The best surviving configuration has been evaluated on the held-out validation set.
 - If the held-out metrics clear the integration bar: declare the repo ready for Gate 5 re-evaluation.
 - If the held-out metrics do not clear the bar after sustained experimentation: document the conclusion honestly and consider whether the signal hypothesis should be abandoned.
+
+Current status: the first full run satisfied the first two criteria and failed the third. The next iteration should be treated as a focused precision-recovery attempt, not as evidence that broad search is still untouched.
 
 ---
 

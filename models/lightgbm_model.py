@@ -33,8 +33,13 @@ class LightGBMDirectionModel(BaseModel):
         learning_rate: float = 0.05,
         num_leaves: int = 15,
         use_scaling: bool = True,
+        decision_threshold: float = 0.5,
     ):
-        super().__init__(feature_columns=feature_columns, use_scaling=use_scaling)
+        super().__init__(
+            feature_columns=feature_columns,
+            use_scaling=use_scaling,
+            decision_threshold=decision_threshold,
+        )
         if not HAS_LIGHTGBM:
             raise ImportError("lightgbm is required for LightGBMDirectionModel")
         self.model = lgb.LGBMClassifier(

@@ -42,6 +42,8 @@ import pandas as pd
 
 from config import (
     DEFAULT_TARGET_COLUMN,
+    DEFAULT_ACTIONABLE_THRESHOLD,
+    DEFAULT_COST_BUFFER_PCT,
     DEFAULT_TRAIN_WINDOW,
     DEFAULT_TEST_WINDOW,
     DEFAULT_MIN_TRAIN_ROWS,
@@ -50,6 +52,13 @@ from config import (
     EXPERIMENT_MIN_IMPROVEMENT,
     HELD_OUT_HOURS,
     EXOG_COLUMNS,
+    REVIEWED_BASELINE_CONFIG,
+    PHASE13_CANDIDATE_BASELINE_CONFIG,
+    EXPERIMENT_LOOP_BASELINE_CONFIG,
+    EXPERIMENT_DECISION_THRESHOLDS,
+    EXPERIMENT_ACTIONABLE_THRESHOLDS,
+    EXPERIMENT_COST_BUFFER_PCTS,
+    EXPERIMENT_RECALL_FLOOR,
 )
 from data.pipeline import build_dataset, write_dataset_metadata
 from evaluation.walk_forward import (
@@ -60,6 +69,7 @@ from evaluation.walk_forward import (
 )
 from evaluation.reporting import score_predictions
 from evaluation.baselines import add_baseline_predictions
+from evaluation.targets import add_targets
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -69,9 +79,7 @@ ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 AUTORESEARCH_PATH = PROJECT_ROOT / "AUTORESEARCH.md"
 CHECKPOINT_PATH = Path(os.environ.get("CHECKPOINT_PATH", str(ARTIFACTS_DIR / "experiment_checkpoint.json")))
 STOP_FLAG_PATH = os.environ.get("STOP_FLAG_PATH", "")
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
-PROGRESS_INTERVAL = 10  # send Telegram notification every N experiments
+PROGRESS_INTERVAL = 10
 
 
 @dataclass
@@ -97,26 +105,6 @@ def _check_stop_flag() -> bool:
     return Path(STOP_FLAG_PATH).exists()
 
 
-def _send_progress(text: str) -> None:
-    """Send a Telegram progress notification (best-effort)."""
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-    try:
-        import urllib.request
-        import urllib.parse
-        data = urllib.parse.urlencode({
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": text,
-        }).encode()
-        req = urllib.request.Request(
-            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", data=data
-        )
-        with urllib.request.urlopen(req, timeout=10) as r:
-            r.read()
-    except Exception as e:
-        logger.warning("Telegram notification failed: %s", e)
-
-
 def _experiment_list_hash(experiments: list[dict]) -> str:
     """Hash the experiment list to detect code changes."""
     serialized = json.dumps(experiments, sort_keys=True, default=str)
@@ -127,12 +115,14 @@ def _save_checkpoint(
     run_id: str,
     experiment_list_hash: str,
     completed_results: list["ExperimentResult"],
+    best_selection_score: float,
     best_composite: float,
     best_model_name: str,
     best_config: dict | None,
     best_scores: dict,
     best_window_scores: list,
     baseline_model: str,
+    baseline_selection_score: float,
     baseline_composite: float,
     baseline_scores: dict,
 ) -> None:
@@ -158,12 +148,14 @@ def _save_checkpoint(
             }
             for r in completed_results
         ],
+        "best_selection_score": best_selection_score,
         "best_composite": best_composite,
         "best_model_name": best_model_name,
         "best_config": best_config,
         "best_scores": best_scores,
         "best_window_scores": [dict(ws) for ws in best_window_scores],
         "baseline_model": baseline_model,
+        "baseline_selection_score": baseline_selection_score,
         "baseline_composite": baseline_composite,
         "baseline_scores": dict(baseline_scores),
     }
@@ -190,6 +182,37 @@ def _load_checkpoint(expected_hash: str) -> dict | None:
 def compute_composite(scores: dict[str, float]) -> float:
     """Composite metric: precision * recall."""
     return scores.get("precision", 0.0) * scores.get("recall", 0.0)
+
+
+def compute_selection_score(scores: dict[str, float]) -> float:
+    """Precision-first selection score with a hard recall floor."""
+    recall = scores.get("recall", 0.0)
+    precision = scores.get("precision", 0.0)
+    if recall < EXPERIMENT_RECALL_FLOOR:
+        return compute_composite(scores)
+    return precision
+
+
+def prepare_target_dataset(
+    base_dataset: pd.DataFrame,
+    target_horizon: int = 1,
+    actionable_threshold: float = DEFAULT_ACTIONABLE_THRESHOLD,
+    cost_buffer: float = DEFAULT_COST_BUFFER_PCT,
+    target_column: str | None = None,
+) -> tuple[pd.DataFrame, str]:
+    """Apply experiment target settings to a dataset copy and drop unlabeled rows."""
+    dataset = base_dataset.copy()
+    if target_horizon != 1:
+        raise ValueError("Experiment loop currently supports 1h target tuning only")
+    dataset = add_targets(
+        dataset,
+        horizon=target_horizon,
+        actionable_threshold=actionable_threshold,
+        cost_buffer=cost_buffer,
+    )
+    resolved_target = target_column or DEFAULT_TARGET_COLUMN
+    dataset = dataset.dropna(subset=[resolved_target]).copy()
+    return dataset, resolved_target
 
 
 def evaluate_configuration(
@@ -241,6 +264,79 @@ def evaluate_configuration(
     mean_scores = pd.DataFrame(window_scores).mean(numeric_only=True).to_dict()
     mean_scores["composite"] = compute_composite(mean_scores)
     return mean_scores, window_scores
+
+
+def evaluate_experiment_spec(
+    dataset: pd.DataFrame,
+    spec: dict,
+    train_window: int = DEFAULT_TRAIN_WINDOW,
+    test_window: int = DEFAULT_TEST_WINDOW,
+) -> tuple[dict[str, float], list[dict[str, float]]]:
+    """Evaluate an experiment-style config dict without mutating repo defaults."""
+    model_name = spec["model_name"]
+    model_kwargs = spec.get("model_kwargs", {})
+    feature_columns = spec.get("feature_columns")
+    dataset_for_eval, target_column = prepare_target_dataset(
+        dataset,
+        target_horizon=spec.get("target_horizon", 1),
+        actionable_threshold=spec.get("actionable_threshold", DEFAULT_ACTIONABLE_THRESHOLD),
+        cost_buffer=spec.get("cost_buffer", DEFAULT_COST_BUFFER_PCT),
+        target_column=spec.get("target_column", DEFAULT_TARGET_COLUMN),
+    )
+
+    original_registry_entry = MODEL_REGISTRY.get(model_name)
+    if feature_columns or model_kwargs:
+        def custom_factory():
+            if model_name == "xgboost_direction":
+                from models.xgboost_model import XGBoostDirectionModel
+                kwargs = {
+                    "n_estimators": 200,
+                    "max_depth": 3,
+                    "learning_rate": 0.05,
+                    "decision_threshold": 0.5,
+                }
+                kwargs.update(model_kwargs)
+                return XGBoostDirectionModel(
+                    feature_columns=feature_columns,
+                    n_estimators=kwargs["n_estimators"],
+                    max_depth=kwargs["max_depth"],
+                    learning_rate=kwargs["learning_rate"],
+                    decision_threshold=kwargs["decision_threshold"],
+                )
+            if model_name == "lightgbm_direction":
+                from models.lightgbm_model import LightGBMDirectionModel
+                kwargs = {
+                    "n_estimators": 200,
+                    "max_depth": 3,
+                    "learning_rate": 0.05,
+                    "num_leaves": 15,
+                    "decision_threshold": 0.5,
+                }
+                kwargs.update(model_kwargs)
+                return LightGBMDirectionModel(
+                    feature_columns=feature_columns,
+                    n_estimators=kwargs["n_estimators"],
+                    max_depth=kwargs["max_depth"],
+                    learning_rate=kwargs["learning_rate"],
+                    num_leaves=kwargs["num_leaves"],
+                    decision_threshold=kwargs["decision_threshold"],
+                )
+            return _build_model(model_name)
+
+        MODEL_REGISTRY[model_name] = custom_factory
+
+    try:
+        return evaluate_configuration(
+            dataset_for_eval,
+            model_name=model_name,
+            target_column=target_column,
+            train_window=train_window,
+            test_window=test_window,
+            model_kwargs=model_kwargs if not feature_columns else None,
+        )
+    finally:
+        if original_registry_entry is not None:
+            MODEL_REGISTRY[model_name] = original_registry_entry
 
 
 def regime_diversity_check(
@@ -364,7 +460,12 @@ def generate_experiments() -> list[dict]:
                 experiments.append({
                     "description": f"xgb: n_est={n_est}, max_d={max_d}, lr={lr}",
                     "model_name": "xgboost_direction",
-                    "model_kwargs": {"n_estimators": n_est, "max_depth": max_d, "learning_rate": lr},
+                    "model_kwargs": {
+                        "n_estimators": n_est,
+                        "max_depth": max_d,
+                        "learning_rate": lr,
+                        "decision_threshold": 0.5,
+                    },
                 })
 
     # LightGBM variations
@@ -384,8 +485,73 @@ def generate_experiments() -> list[dict]:
                     experiments.append({
                         "description": f"lgbm: n_est={n_est}, max_d={max_d}, lr={lr}, leaves={n_leaves}",
                         "model_name": "lightgbm_direction",
-                        "model_kwargs": {"n_estimators": n_est, "max_depth": max_d, "learning_rate": lr, "num_leaves": n_leaves},
+                        "model_kwargs": {
+                            "n_estimators": n_est,
+                            "max_depth": max_d,
+                            "learning_rate": lr,
+                            "num_leaves": n_leaves,
+                            "decision_threshold": 0.5,
+                        },
                     })
+
+    # Precision-first threshold search around the current Phase 13 candidate.
+    candidate_kwargs = dict(PHASE13_CANDIDATE_BASELINE_CONFIG.get("model_kwargs", {}))
+    candidate_features = list(PHASE13_CANDIDATE_BASELINE_CONFIG.get("feature_columns", base_features))
+    candidate_model = PHASE13_CANDIDATE_BASELINE_CONFIG["model_name"]
+
+    for decision_threshold in EXPERIMENT_DECISION_THRESHOLDS:
+        if decision_threshold == candidate_kwargs.get("decision_threshold", 0.5):
+            continue
+        tuned_kwargs = dict(candidate_kwargs)
+        tuned_kwargs["decision_threshold"] = decision_threshold
+        experiments.append({
+            "description": f"candidate: decision_threshold={decision_threshold:.2f}",
+            "model_name": candidate_model,
+            "model_kwargs": tuned_kwargs,
+            "feature_columns": candidate_features,
+        })
+
+    for actionable_threshold in EXPERIMENT_ACTIONABLE_THRESHOLDS:
+        if actionable_threshold == DEFAULT_ACTIONABLE_THRESHOLD:
+            continue
+        experiments.append({
+            "description": f"candidate: actionable_threshold={actionable_threshold:.4f}",
+            "model_name": candidate_model,
+            "model_kwargs": dict(candidate_kwargs),
+            "feature_columns": candidate_features,
+            "actionable_threshold": actionable_threshold,
+        })
+
+    for cost_buffer in EXPERIMENT_COST_BUFFER_PCTS:
+        if cost_buffer == DEFAULT_COST_BUFFER_PCT:
+            continue
+        experiments.append({
+            "description": f"candidate: cost_buffer={cost_buffer:.4f}",
+            "model_name": candidate_model,
+            "model_kwargs": dict(candidate_kwargs),
+            "feature_columns": candidate_features,
+            "cost_buffer": cost_buffer,
+        })
+
+    for actionable_threshold in EXPERIMENT_ACTIONABLE_THRESHOLDS:
+        for decision_threshold in EXPERIMENT_DECISION_THRESHOLDS:
+            if (
+                actionable_threshold == DEFAULT_ACTIONABLE_THRESHOLD
+                and decision_threshold == candidate_kwargs.get("decision_threshold", 0.5)
+            ):
+                continue
+            tuned_kwargs = dict(candidate_kwargs)
+            tuned_kwargs["decision_threshold"] = decision_threshold
+            experiments.append({
+                "description": (
+                    f"candidate: actionable_threshold={actionable_threshold:.4f}, "
+                    f"decision_threshold={decision_threshold:.2f}"
+                ),
+                "model_name": candidate_model,
+                "model_kwargs": tuned_kwargs,
+                "feature_columns": candidate_features,
+                "actionable_threshold": actionable_threshold,
+            })
 
     # --- Category 2: Feature family ablation ---
 
@@ -474,51 +640,17 @@ def run_single_experiment(
 
     logger.info("Experiment %d: %s", experiment_id, description)
 
-    # If custom feature columns or model kwargs, temporarily override registry
-    original_registry_entry = MODEL_REGISTRY.get(model_name)
-    if feature_columns or model_kwargs:
-        def custom_factory():
-            if model_name == "xgboost_direction":
-                from models.xgboost_model import XGBoostDirectionModel
-                kwargs = {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05}
-                kwargs.update(model_kwargs)
-                m = XGBoostDirectionModel(
-                    feature_columns=feature_columns,
-                    n_estimators=kwargs["n_estimators"],
-                    max_depth=kwargs["max_depth"],
-                    learning_rate=kwargs["learning_rate"],
-                )
-                return m
-            elif model_name == "lightgbm_direction":
-                from models.lightgbm_model import LightGBMDirectionModel
-                kwargs = {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05, "num_leaves": 15}
-                kwargs.update(model_kwargs)
-                m = LightGBMDirectionModel(
-                    feature_columns=feature_columns,
-                    n_estimators=kwargs["n_estimators"],
-                    max_depth=kwargs["max_depth"],
-                    learning_rate=kwargs["learning_rate"],
-                    num_leaves=kwargs["num_leaves"],
-                )
-                return m
-            else:
-                return _build_model(model_name)
-
-        MODEL_REGISTRY[model_name] = custom_factory
-
-    try:
-        scores, window_scores = evaluate_configuration(
-            dataset,
-            model_name=model_name,
-            target_column=target_column,
-            train_window=train_window,
-            test_window=test_window,
-            model_kwargs=model_kwargs if not feature_columns else None,
-        )
-    finally:
-        # Restore original registry
-        if original_registry_entry is not None:
-            MODEL_REGISTRY[model_name] = original_registry_entry
+    scores, window_scores = evaluate_experiment_spec(
+        dataset,
+        {
+            "model_name": model_name,
+            "model_kwargs": model_kwargs,
+            "feature_columns": feature_columns,
+            "target_column": target_column,
+        },
+        train_window=train_window,
+        test_window=test_window,
+    )
 
     if not scores:
         return ExperimentResult(
@@ -539,6 +671,9 @@ def run_single_experiment(
     composite = compute_composite(scores)
     baseline_composite = compute_composite(baseline_scores)
     improvement = composite - baseline_composite
+    selection_score = compute_selection_score(scores)
+    baseline_selection_score = compute_selection_score(baseline_scores)
+    selection_improvement = selection_score - baseline_selection_score
 
     # Check regime diversity
     diversity_passed, windows_improved = regime_diversity_check(
@@ -546,15 +681,21 @@ def run_single_experiment(
     )
 
     # Decision logic
-    if improvement < EXPERIMENT_MIN_IMPROVEMENT:
+    if selection_improvement < EXPERIMENT_MIN_IMPROVEMENT:
         status = "discard"
-        reason = f"insufficient improvement ({improvement:+.6f} < {EXPERIMENT_MIN_IMPROVEMENT})"
+        reason = (
+            f"insufficient precision-first improvement "
+            f"({selection_improvement:+.6f} < {EXPERIMENT_MIN_IMPROVEMENT})"
+        )
     elif not diversity_passed:
         status = "discard"
         reason = f"regime diversity failed ({windows_improved}/{len(window_scores)} windows improved, need 2+)"
     else:
         status = "keep"
-        reason = f"improvement {improvement:+.6f}, {windows_improved}/{len(window_scores)} windows improved"
+        reason = (
+            f"selection improvement {selection_improvement:+.6f}, "
+            f"composite {improvement:+.6f}, {windows_improved}/{len(window_scores)} windows improved"
+        )
 
     return ExperimentResult(
         experiment_id=experiment_id,
@@ -576,10 +717,11 @@ def generate_autoresearch_md(
     run_timestamp: str,
     elapsed_minutes: float,
     baseline_model: str,
+    baseline_description: str,
     baseline_scores: dict[str, float],
     baseline_composite: float,
-    xgb_scores: dict[str, float],
-    lgbm_scores: dict[str, float],
+    reviewed_baseline_scores: dict[str, float],
+    candidate_baseline_scores: dict[str, float],
     experiment_results: list[ExperimentResult],
     best_experiment: ExperimentResult | None,
     best_config: dict | None,
@@ -618,19 +760,24 @@ def generate_autoresearch_md(
     # --- Baselines ---
     lines.append("## Baselines")
     lines.append("")
-    lines.append("| Model | Composite | Precision | Recall | ROC-AUC | F1 | Selected |")
-    lines.append("|-------|-----------|-----------|--------|---------|----| ---------|")
-    xgb_comp = compute_composite(xgb_scores)
-    lgbm_comp = compute_composite(lgbm_scores)
+    lines.append("| Baseline | Composite | Precision | Recall | ROC-AUC | F1 | Selected |")
+    lines.append("|----------|-----------|-----------|--------|---------|----|----------|")
+    reviewed_comp = compute_composite(reviewed_baseline_scores)
+    candidate_comp = compute_composite(candidate_baseline_scores)
     lines.append(
-        f"| XGBoost | {xgb_comp:.6f} | {xgb_scores.get('precision', 0):.4f} | "
-        f"{xgb_scores.get('recall', 0):.4f} | {xgb_scores.get('roc_auc', 0):.4f} | "
-        f"{xgb_scores.get('f1', 0):.4f} | {'**yes**' if baseline_model == 'xgboost_direction' else ''} |"
+        f"| Reviewed repo baseline | {reviewed_comp:.6f} | {reviewed_baseline_scores.get('precision', 0):.4f} | "
+        f"{reviewed_baseline_scores.get('recall', 0):.4f} | {reviewed_baseline_scores.get('roc_auc', 0):.4f} | "
+        f"{reviewed_baseline_scores.get('f1', 0):.4f} |  |"
     )
     lines.append(
-        f"| LightGBM | {lgbm_comp:.6f} | {lgbm_scores.get('precision', 0):.4f} | "
-        f"{lgbm_scores.get('recall', 0):.4f} | {lgbm_scores.get('roc_auc', 0):.4f} | "
-        f"{lgbm_scores.get('f1', 0):.4f} | {'**yes**' if baseline_model == 'lightgbm_direction' else ''} |"
+        f"| Phase 13 candidate baseline | {candidate_comp:.6f} | {candidate_baseline_scores.get('precision', 0):.4f} | "
+        f"{candidate_baseline_scores.get('recall', 0):.4f} | {candidate_baseline_scores.get('roc_auc', 0):.4f} | "
+        f"{candidate_baseline_scores.get('f1', 0):.4f} | {'**yes**' if baseline_description == PHASE13_CANDIDATE_BASELINE_CONFIG['description'] else ''} |"
+    )
+    lines.append(
+        f"| Active experiment baseline | {baseline_composite:.6f} | {baseline_scores.get('precision', 0):.4f} | "
+        f"{baseline_scores.get('recall', 0):.4f} | {baseline_scores.get('roc_auc', 0):.4f} | "
+        f"{baseline_scores.get('f1', 0):.4f} | **yes** |"
     )
     lines.append("")
 
@@ -660,7 +807,7 @@ def generate_autoresearch_md(
         lines.append(f"- **ROC-AUC:** {best_experiment.roc_auc:.4f}")
         lines.append(f"- **F1:** {best_experiment.f1:.4f}")
     else:
-        lines.append(f"No experiment improved over the baseline ({baseline_model}, composite={baseline_composite:.6f}).")
+        lines.append(f"No experiment improved over the baseline ({baseline_description}, composite={baseline_composite:.6f}).")
     lines.append("")
 
     # --- Held-out validation ---
@@ -723,45 +870,45 @@ def main() -> None:
 
     # Establish baseline on experiment dataset
     logger.info("Establishing baseline...")
-
-    # Baseline: XGBoost direction (current default)
-    xgb_scores, xgb_window_scores = evaluate_configuration(
+    reviewed_scores, reviewed_window_scores = evaluate_experiment_spec(
         experiment_dataset,
-        model_name="xgboost_direction",
-        target_column=DEFAULT_TARGET_COLUMN,
-        train_window=DEFAULT_TRAIN_WINDOW,
-        test_window=DEFAULT_TEST_WINDOW,
+        REVIEWED_BASELINE_CONFIG,
+    )
+    candidate_scores, candidate_window_scores = evaluate_experiment_spec(
+        experiment_dataset,
+        PHASE13_CANDIDATE_BASELINE_CONFIG,
+    )
+    baseline_scores, baseline_window_scores = evaluate_experiment_spec(
+        experiment_dataset,
+        EXPERIMENT_LOOP_BASELINE_CONFIG,
     )
 
-    # Baseline: LightGBM direction
-    lgbm_scores, lgbm_window_scores = evaluate_configuration(
-        experiment_dataset,
-        model_name="lightgbm_direction",
-        target_column=DEFAULT_TARGET_COLUMN,
-        train_window=DEFAULT_TRAIN_WINDOW,
-        test_window=DEFAULT_TEST_WINDOW,
-    )
-
-    # Use the better baseline as reference
-    xgb_composite = compute_composite(xgb_scores)
-    lgbm_composite = compute_composite(lgbm_scores)
-
-    logger.info("XGBoost baseline: composite=%.6f (precision=%.4f, recall=%.4f, roc_auc=%.4f)",
-                xgb_composite, xgb_scores.get("precision", 0), xgb_scores.get("recall", 0), xgb_scores.get("roc_auc", 0))
-    logger.info("LightGBM baseline: composite=%.6f (precision=%.4f, recall=%.4f, roc_auc=%.4f)",
-                lgbm_composite, lgbm_scores.get("precision", 0), lgbm_scores.get("recall", 0), lgbm_scores.get("roc_auc", 0))
-
-    if lgbm_composite >= xgb_composite:
-        baseline_scores = lgbm_scores
-        baseline_window_scores = lgbm_window_scores
-        baseline_model = "lightgbm_direction"
-    else:
-        baseline_scores = xgb_scores
-        baseline_window_scores = xgb_window_scores
-        baseline_model = "xgboost_direction"
-
+    reviewed_composite = compute_composite(reviewed_scores)
+    candidate_composite = compute_composite(candidate_scores)
     baseline_composite = compute_composite(baseline_scores)
-    logger.info("Using %s as baseline (composite=%.6f)", baseline_model, baseline_composite)
+    baseline_selection_score = compute_selection_score(baseline_scores)
+    baseline_model = EXPERIMENT_LOOP_BASELINE_CONFIG["model_name"]
+
+    logger.info(
+        "Reviewed baseline: composite=%.6f (precision=%.4f, recall=%.4f, roc_auc=%.4f)",
+        reviewed_composite,
+        reviewed_scores.get("precision", 0),
+        reviewed_scores.get("recall", 0),
+        reviewed_scores.get("roc_auc", 0),
+    )
+    logger.info(
+        "Phase 13 candidate baseline: composite=%.6f (precision=%.4f, recall=%.4f, roc_auc=%.4f)",
+        candidate_composite,
+        candidate_scores.get("precision", 0),
+        candidate_scores.get("recall", 0),
+        candidate_scores.get("roc_auc", 0),
+    )
+    logger.info(
+        "Using experiment-loop baseline: %s (selection=%.6f, composite=%.6f)",
+        EXPERIMENT_LOOP_BASELINE_CONFIG["description"],
+        baseline_selection_score,
+        baseline_composite,
+    )
 
     # Generate experiments and compute hash for checkpoint validation
     experiments = generate_experiments()
@@ -772,6 +919,7 @@ def main() -> None:
     run_id = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     completed_ids: set[int] = set()
     all_results: list[ExperimentResult] = []
+    best_selection_score = baseline_selection_score
     best_composite = baseline_composite
     best_scores = baseline_scores.copy()
     best_window_scores = list(baseline_window_scores)
@@ -809,6 +957,7 @@ def main() -> None:
                 discarded_count += 1
 
         # Restore best state from checkpoint
+        best_selection_score = checkpoint.get("best_selection_score", baseline_selection_score)
         best_composite = checkpoint.get("best_composite", baseline_composite)
         best_scores = checkpoint.get("best_scores", baseline_scores.copy())
         best_window_scores = checkpoint.get("best_window_scores", list(baseline_window_scores))
@@ -824,7 +973,7 @@ def main() -> None:
         # Save baselines to results
         save_result(ExperimentResult(
             experiment_id=0,
-            description=f"BASELINE: {baseline_model} default config",
+            description=f"BASELINE: {EXPERIMENT_LOOP_BASELINE_CONFIG['description']}",
             model_name=baseline_model,
             composite_metric=baseline_composite,
             precision=baseline_scores.get("precision", 0.0),
@@ -849,10 +998,6 @@ def main() -> None:
         if _check_stop_flag():
             logger.info("Stop flag detected — finishing gracefully after %d experiments",
                         kept_count + discarded_count)
-            _send_progress(
-                f"BTC Autoresearch: stop requested. "
-                f"Finishing after {kept_count + discarded_count}/{total_experiments} experiments."
-            )
             stopped_early = True
             break
 
@@ -879,6 +1024,12 @@ def main() -> None:
             logger.info("  KEEP: %s (composite=%.6f, +%.6f)",
                         result.description, result.composite_metric,
                         result.composite_metric - best_composite)
+            best_selection_score = compute_selection_score(
+                {
+                    "precision": result.precision,
+                    "recall": result.recall,
+                }
+            )
             best_composite = result.composite_metric
             best_scores = {
                 "precision": result.precision,
@@ -943,23 +1094,29 @@ def main() -> None:
             run_id=run_id,
             experiment_list_hash=exp_hash,
             completed_results=all_results,
+            best_selection_score=best_selection_score,
             best_composite=best_composite,
             best_model_name=best_experiment.model_name if best_experiment else baseline_model,
             best_config=best_config,
             best_scores=best_scores,
             best_window_scores=best_window_scores,
             baseline_model=baseline_model,
+            baseline_selection_score=baseline_selection_score,
             baseline_composite=baseline_composite,
             baseline_scores=baseline_scores,
         )
 
-        # Progress notification every N experiments
+        # Periodic progress log
         experiments_done = kept_count + discarded_count
         if experiments_done > 0 and experiments_done % PROGRESS_INTERVAL == 0:
-            _send_progress(
-                f"BTC Autoresearch: {experiments_done}/{total_experiments} experiments\n"
-                f"Kept: {kept_count} | Discarded: {discarded_count}\n"
-                f"Best composite: {best_composite:.4f} (baseline: {baseline_composite:.4f})"
+            logger.info(
+                "Progress: %d/%d experiments, kept=%d, discarded=%d, best_selection=%.4f, best_composite=%.4f",
+                experiments_done,
+                total_experiments,
+                kept_count,
+                discarded_count,
+                best_selection_score,
+                best_composite,
             )
 
     elapsed = time.time() - start_time
@@ -970,6 +1127,8 @@ def main() -> None:
     logger.info("Experiments run: %d", kept_count + discarded_count)
     logger.info("Kept: %d, Discarded: %d", kept_count, discarded_count)
     logger.info("Elapsed: %.1f minutes", elapsed / 60)
+    logger.info("Best selection score: %.6f (baseline was %.6f)",
+                best_selection_score, baseline_selection_score)
     logger.info("Best composite: %.6f (baseline was %.6f)",
                 best_composite, baseline_composite)
 
@@ -990,10 +1149,16 @@ def main() -> None:
         eval_model_name = best_config["model_name"]
         eval_kwargs = best_config.get("model_kwargs", {})
         eval_features = best_config.get("feature_columns")
+        eval_target_horizon = best_config.get("target_horizon", 1)
+        eval_actionable_threshold = best_config.get("actionable_threshold", DEFAULT_ACTIONABLE_THRESHOLD)
+        eval_cost_buffer = best_config.get("cost_buffer", DEFAULT_COST_BUFFER_PCT)
     else:
         eval_model_name = baseline_model
-        eval_kwargs = {}
-        eval_features = None
+        eval_kwargs = EXPERIMENT_LOOP_BASELINE_CONFIG.get("model_kwargs", {})
+        eval_features = EXPERIMENT_LOOP_BASELINE_CONFIG.get("feature_columns")
+        eval_target_horizon = EXPERIMENT_LOOP_BASELINE_CONFIG.get("target_horizon", 1)
+        eval_actionable_threshold = EXPERIMENT_LOOP_BASELINE_CONFIG.get("actionable_threshold", DEFAULT_ACTIONABLE_THRESHOLD)
+        eval_cost_buffer = EXPERIMENT_LOOP_BASELINE_CONFIG.get("cost_buffer", DEFAULT_COST_BUFFER_PCT)
 
     logger.info("Evaluating best config on held-out set: %s", best_config["description"] if best_config else baseline_model)
 
@@ -1002,21 +1167,35 @@ def main() -> None:
     # During the experiment loop, walk-forward used sliding windows for regime
     # diversity — but the held-out evaluation is a single train/predict pass
     # because it is only done once and must reflect the best achievable result.
-    train_data = experiment_dataset
+    train_data, eval_target_column = prepare_target_dataset(
+        experiment_dataset,
+        target_horizon=eval_target_horizon,
+        actionable_threshold=eval_actionable_threshold,
+        cost_buffer=eval_cost_buffer,
+        target_column=DEFAULT_TARGET_COLUMN,
+    )
+    held_out_eval_data, _ = prepare_target_dataset(
+        held_out_dataset,
+        target_horizon=eval_target_horizon,
+        actionable_threshold=eval_actionable_threshold,
+        cost_buffer=eval_cost_buffer,
+        target_column=DEFAULT_TARGET_COLUMN,
+    )
 
     if eval_model_name == "xgboost_direction":
         from models.xgboost_model import XGBoostDirectionModel
-        kwargs = {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05}
+        kwargs = {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05, "decision_threshold": 0.5}
         kwargs.update(eval_kwargs)
         model = XGBoostDirectionModel(
             feature_columns=eval_features,
             n_estimators=kwargs["n_estimators"],
             max_depth=kwargs["max_depth"],
             learning_rate=kwargs["learning_rate"],
+            decision_threshold=kwargs["decision_threshold"],
         )
     elif eval_model_name == "lightgbm_direction":
         from models.lightgbm_model import LightGBMDirectionModel
-        kwargs = {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05, "num_leaves": 15}
+        kwargs = {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05, "num_leaves": 15, "decision_threshold": 0.5}
         kwargs.update(eval_kwargs)
         model = LightGBMDirectionModel(
             feature_columns=eval_features,
@@ -1024,16 +1203,17 @@ def main() -> None:
             max_depth=kwargs["max_depth"],
             learning_rate=kwargs["learning_rate"],
             num_leaves=kwargs["num_leaves"],
+            decision_threshold=kwargs["decision_threshold"],
         )
     else:
         model = _build_model(eval_model_name)
 
-    model.fit(train_data, target_column=DEFAULT_TARGET_COLUMN)
-    predictions = model.predict_frame(held_out_dataset)
+    model.fit(train_data, target_column=eval_target_column)
+    predictions = model.predict_frame(held_out_eval_data)
 
     probability_column = "probability" if "probability" in predictions.columns else None
     held_out_scores = score_predictions(
-        held_out_dataset, predictions, DEFAULT_TARGET_COLUMN, "prediction", probability_column
+        held_out_eval_data, predictions, eval_target_column, "prediction", probability_column
     )
     held_out_composite = compute_composite(held_out_scores)
 
@@ -1085,8 +1265,13 @@ def main() -> None:
         "experiments_discarded": discarded_count,
         "elapsed_minutes": round(elapsed / 60, 1),
         "baseline_model": baseline_model,
+        "baseline_description": EXPERIMENT_LOOP_BASELINE_CONFIG["description"],
+        "baseline_selection_score": round(baseline_selection_score, 6),
         "baseline_composite": round(baseline_composite, 6),
         "baseline_scores": {k: round(v, 4) for k, v in baseline_scores.items()},
+        "reviewed_baseline_scores": {k: round(v, 4) for k, v in reviewed_scores.items()},
+        "phase13_candidate_baseline_scores": {k: round(v, 4) for k, v in candidate_scores.items()},
+        "best_selection_score": round(best_selection_score, 6),
         "best_experiment_composite": round(best_composite, 6),
         "best_experiment_config": best_config["description"] if best_config else "baseline (no improvement found)",
         "best_experiment_scores": {k: round(v, 4) for k, v in best_scores.items()} if best_scores else {},
@@ -1116,10 +1301,11 @@ def main() -> None:
         run_timestamp=datetime.now(timezone.utc).isoformat(),
         elapsed_minutes=elapsed / 60,
         baseline_model=baseline_model,
+        baseline_description=EXPERIMENT_LOOP_BASELINE_CONFIG["description"],
         baseline_scores=baseline_scores,
         baseline_composite=baseline_composite,
-        xgb_scores=xgb_scores,
-        lgbm_scores=lgbm_scores,
+        reviewed_baseline_scores=reviewed_scores,
+        candidate_baseline_scores=candidate_scores,
         experiment_results=all_results,
         best_experiment=best_experiment,
         best_config=best_config,

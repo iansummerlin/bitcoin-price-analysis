@@ -29,6 +29,16 @@ class TestConfigConstants(unittest.TestCase):
         for column in config.OHLCV_COLUMNS:
             self.assertIn(column, config.TRADING_CSV_COLUMNS)
 
+    def test_phase13_baseline_configs_are_explicit(self):
+        self.assertEqual(config.REVIEWED_BASELINE_CONFIG["model_name"], "xgboost_direction")
+        self.assertEqual(config.PHASE13_CANDIDATE_BASELINE_CONFIG["model_name"], "xgboost_direction")
+        self.assertEqual(
+            config.EXPERIMENT_LOOP_BASELINE_CONFIG["description"],
+            config.PHASE13_CANDIDATE_BASELINE_CONFIG["description"],
+        )
+        self.assertIn(0.5, config.EXPERIMENT_DECISION_THRESHOLDS)
+        self.assertGreaterEqual(config.EXPERIMENT_RECALL_FLOOR, 0.15)
+
 
 if __name__ == "__main__":
     unittest.main()

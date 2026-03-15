@@ -1,0 +1,46 @@
+{
+  "phase": "13",
+  "run_id": "2026-03-15T16:39:26Z",
+  "generated_at": "2026-03-15T21:23:50.474690+00:00",
+  "stopped_early": false,
+  "experiments_run": 100,
+  "experiments_kept": 3,
+  "experiments_discarded": 97,
+  "elapsed_minutes": 284.3,
+  "baseline_model": "xgboost_direction",
+  "baseline_composite": 0.035428,
+  "baseline_scores": {
+    "directional_accuracy": 0.7715,
+    "precision": 0.3029,
+    "recall": 0.1169,
+    "f1": 0.1152,
+    "positive_rate": 0.0912,
+    "roc_auc": 0.6032,
+    "composite": 0.0354
+  },
+  "best_experiment_composite": 0.099656,
+  "best_experiment_config": "xgb: n_est=300, max_d=5, lr=0.1",
+  "best_experiment_scores": {
+    "precision": 0.2248,
+    "recall": 0.4433,
+    "roc_auc": 0.5521,
+    "f1": 0.262,
+    "composite": 0.0997
+  },
+  "held_out_scores": {
+    "directional_accuracy": 0.8241,
+    "precision": 0.4074,
+    "recall": 0.0595,
+    "f1": 0.1038,
+    "positive_rate": 0.025,
+    "roc_auc": 0.7033
+  },
+  "held_out_composite": 0.024224,
+  "gate_7": {
+    "precision_pass": false,
+    "recall_pass": false,
+    "roc_auc_pass": true,
+    "overall": false
+  },
+  "conclusion": "FAIL: Best configuration does not clear all integration thresholds. Repo remains research-only."
+}

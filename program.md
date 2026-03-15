@@ -10,6 +10,11 @@ The search space includes:
 - XGBoost and LightGBM hyperparameter grids (n_estimators, max_depth, learning_rate, num_leaves)
 - Feature family ablation (remove cross-asset, on-chain, microstructure, or all new families)
 - Individual feature removal (drop each of 42 features one at a time)
+- Decision-threshold tuning for probabilistic classifiers
+- Actionable-threshold and cost-buffer tuning for target construction
+
+This loop is evidence-generating only. It does not promote winning configurations
+into `config.py`, training defaults, or export paths.
 
 ## Metric
 Optimization target: **composite score** = `precision * recall` on the
@@ -17,6 +22,10 @@ cost-adjusted directional target (`target_direction_cost_adj`).
 
 This product captures both precision and recall in a single number. A configuration
 that achieves precision=0.55 and recall=0.15 would score 0.0825.
+
+After the first full run, this metric should be treated as a coarse search metric,
+not the final decision objective. Follow-up runs should explicitly focus on the
+acceptance gate, especially held-out precision.
 
 ## Budget
 - Stop after 100 experiments or 12 hours, whichever comes first.
@@ -35,6 +44,7 @@ Immutable during the search: `evaluation/*`, `data/*`, `tests/*`, `backtest.py`,
 3. Budget cap: 100 experiments or 12 hours.
 4. Checkpoint/resume: progress saved after every experiment.
 5. Stop flag: touch a file to gracefully stop between experiments.
+6. No automatic code mutation: findings must be reviewed and promoted manually.
 
 ## Results logging
 Every experiment is logged to `results.tsv` with columns:
@@ -64,3 +74,12 @@ during the search phase:
   data, because (a) the held-out set is only evaluated once, (b) we want the
   model to have the best possible training set for the final verdict, and
   (c) walk-forward already validated the configuration's robustness.
+
+## Current interpretation
+The first full run improved the walk-forward composite score but failed the held-out
+precision/recall gate. That means the next autoresearch pass should focus on:
+
+- probability-threshold tuning,
+- actionable threshold / cost-buffer tuning,
+- precision-first operating-point search,
+- only then broader hyperparameter expansion.

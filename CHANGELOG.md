@@ -16,6 +16,16 @@ Add entries for:
 Do not use this as a full engineering diary. Prefer short entries linked to the
 relevant docs and commits.
 
+## 2026-03-15 (Phase 13 experiment loop refinements)
+
+### Changed
+- Experiment loop: renamed baseline score params to `reviewed_baseline_scores`/`candidate_baseline_scores` for clarity
+- Added `baseline_description` param to autoresearch report generation
+- Model thresholds configurable in `config.py`
+
+### Fixed
+- Test suite: aligned `test_experiment_loop.py` with updated `generate_autoresearch_md()` signature
+
 ## 2026-03-15 (Phase 13 infrastructure)
 
 ### Added
@@ -38,7 +48,7 @@ relevant docs and commits.
 - `program.md`: experiment loop documentation, metric, budget, held-out protocol
 - `AUTORESEARCH.md` report generation after each run
 - Held-out validation split config: last 3 months reserved, trained on all pre-held-out data
-- Checkpointing, stop-flag, Telegram progress notifications
+- Checkpointing and stop-flag support
 - `make experiment` target
 - 34 tests for experiment loop (composite metric, regime diversity, TSV round-trip, AUTORESEARCH.md, held-out isolation, end-to-end mini loop)
 

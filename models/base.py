@@ -28,9 +28,15 @@ class BaseModel:
 
     model_name = "base_model"
 
-    def __init__(self, feature_columns: list[str] | None = None, use_scaling: bool = True):
+    def __init__(
+        self,
+        feature_columns: list[str] | None = None,
+        use_scaling: bool = True,
+        decision_threshold: float = 0.5,
+    ):
         self.feature_columns = feature_columns or EXOG_COLUMNS
         self.use_scaling = use_scaling
+        self.decision_threshold = decision_threshold
         self.scaler: StandardScaler | None = None
         self.is_fitted = False
         self.target_column: str | None = None
@@ -54,6 +60,7 @@ class BaseModel:
             probability = None
         if probability is not None:
             frame["probability"] = probability
+            frame["prediction"] = (frame["probability"] >= self.decision_threshold).astype(int)
         frame["actionable"] = frame["prediction"] > 0
         return frame
 

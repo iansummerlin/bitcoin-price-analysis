@@ -188,3 +188,41 @@ EXPERIMENT_MAX_ADDED_LINES = 20  # max lines added without proportional gain
 DEFAULT_REGRESSION_MODEL = "xgboost_regressor"
 DEFAULT_CLASSIFICATION_MODEL = "xgboost_direction"
 MODEL_STALE_AFTER_DAYS = 30
+
+# Reviewed baseline used by the canonical train/backtest/export paths.
+# This is intentionally conservative and must only change after explicit review.
+REVIEWED_BASELINE_CONFIG = {
+    "description": "reviewed baseline: xgb default repo config",
+    "model_name": "xgboost_direction",
+    "model_kwargs": {
+        "n_estimators": 100,
+        "max_depth": 3,
+    },
+    "feature_columns": list(EXOG_COLUMNS),
+}
+
+# Best surviving configuration from the March 15, 2026 Phase 13 autoresearch run.
+# This is a research candidate baseline for future experiment loops, not a
+# reviewed repo-wide default.
+PHASE13_CANDIDATE_BASELINE_CONFIG = {
+    "description": "phase13 candidate baseline: xgb n_est=300, max_d=5, lr=0.1",
+    "model_name": "xgboost_direction",
+    "model_kwargs": {
+        "n_estimators": 300,
+        "max_depth": 5,
+        "learning_rate": 0.1,
+        "decision_threshold": 0.5,
+    },
+    "feature_columns": list(EXOG_COLUMNS),
+}
+
+# The experiment loop should start from the best known research candidate rather
+# than the reviewed production-style default, but that candidate is not promoted
+# automatically into the canonical train/backtest/export path.
+EXPERIMENT_LOOP_BASELINE_CONFIG = PHASE13_CANDIDATE_BASELINE_CONFIG
+
+# Phase 13 precision-first search settings.
+EXPERIMENT_DECISION_THRESHOLDS = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75]
+EXPERIMENT_ACTIONABLE_THRESHOLDS = [0.0035, 0.0045, 0.0055, 0.0065, 0.0075]
+EXPERIMENT_COST_BUFFER_PCTS = [DEFAULT_COST_BUFFER_PCT, 0.0045, 0.0055, 0.0065]
+EXPERIMENT_RECALL_FLOOR = 0.15
