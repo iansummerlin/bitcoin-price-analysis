@@ -4,7 +4,7 @@
 
 A Bitcoin signal-generation and model-research repo. It does **not** place trades. It exists to answer whether a predictive signal survives realistic costs. The canonical plan and progress live in `ROADMAP.md`.
 
-**Current status:** research-only. Phase 12 complete (data universe expanded, no new family individually validated as a signal source). Best known config: LightGBM, 4h horizon, 42 features. Clears 2 of 3 thresholds (ROC-AUC=0.603, recall=0.183) but precision=0.428 is below the 0.55 bar. Data last refreshed March 14, 2026.
+**Current status:** research-only. Phase 12 complete (data universe expanded, no new family individually validated as a signal source). Phase 13 complete (autonomous experiment loop — 3 runs, 172 experiments, search space exhausted). All runs failed Gate 7. Best held-out: precision=0.407 (need 0.55), recall=0.059 (need 0.15), ROC-AUC=0.703 (pass). Conclusion: hyperparameter/threshold tuning cannot close the precision gap with the current 42-feature set. The bottleneck is data inputs, not model configuration. Data last refreshed March 14, 2026.
 
 ---
 

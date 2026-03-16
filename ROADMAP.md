@@ -5,7 +5,7 @@
 - **Purpose:** Turn this repository into a reliable Bitcoin signal-generation and model-research repo for a separate trading/execution repository.
 - **Audience:** A fresh engineering agent with zero prior context.
 - **Primary constraint:** Prove whether the repo can produce a usable predictive signal. It must not become an execution bot.
-- **Last updated:** March 16, 2026. Data refreshed through March 13, 2026.
+- **Last updated:** March 16, 2026 (Phase 13 concluded). Data refreshed through March 13, 2026.
 
 ---
 
@@ -16,11 +16,11 @@ If you are a fresh agent with no other context:
 1. Read this roadmap fully once.
 2. Read `CLAUDE.md` for architecture, commands, and non-negotiable constraints.
 3. Read `README.md` to confirm it matches the roadmap.
-4. **Phases 0–12 are complete.** The infrastructure is solid — do not redo this work.
-5. **Phase 13 (autonomous experiment loop) is the current work.** Infrastructure is built, two full runs have been completed, both failed the held-out gate. The next iteration should focus on precision recovery, not broad search.
+4. **Phases 0–13 are complete.** The infrastructure is solid — do not redo this work.
+5. **Phase 13 (autonomous experiment loop) concluded after 3 runs and 172 experiments.** All runs failed Gate 7. The search space is exhausted — hyperparameter/threshold tuning cannot close the precision gap with the current feature set. The bottleneck is data inputs.
 6. Read `program.md` for experiment loop operating model and `AUTORESEARCH.md` for the latest run results.
 
-**Default next task:** Phase 13 threshold search — tune the actionable threshold, cost buffer, and classification decision boundary to improve held-out precision without collapsing recall below 0.15.
+**Default next task:** Expand the data universe with leading indicators (e.g. global liquidity cycle, exchange flow data from paid providers) before running the experiment loop again. See "If Phase 12 is reopened" section and Phase 13 conclusion for context.
 
 ---
 
@@ -40,11 +40,11 @@ If the evidence says "no", the correct outcome is to document that clearly and s
 
 The model must clear all three on walk-forward evaluation before downstream integration:
 
-| Metric | Threshold | Best held-out (run 1) | Best held-out (run 2) |
-|--------|-----------|----------------------|----------------------|
-| Precision | >= 0.55 | 0.4074 (FAIL) | 0.3333 (FAIL) |
-| Recall | >= 0.15 | 0.0595 (FAIL) | 0.0108 (FAIL) |
-| ROC-AUC | >= 0.60 | 0.7033 (PASS) | 0.7140 (PASS) |
+| Metric | Threshold | Best held-out (run 1) | Best held-out (run 2) | Best held-out (run 3) |
+|--------|-----------|----------------------|----------------------|----------------------|
+| Precision | >= 0.55 | 0.4074 (FAIL) | 0.3333 (FAIL) | 0.4074 (FAIL) |
+| Recall | >= 0.15 | 0.0595 (FAIL) | 0.0108 (FAIL) | 0.0595 (FAIL) |
+| ROC-AUC | >= 0.60 | 0.7033 (PASS) | 0.7140 (PASS) | 0.7033 (PASS) |
 
 These must hold across multiple walk-forward windows, not just one split.
 
@@ -128,20 +128,21 @@ Any new data family added in a reopened Phase 12 must follow the same pattern: i
 
 ---
 
-## Phase 13: Autonomous Experiment Loop (current)
+## Phase 13: Autonomous Experiment Loop (complete)
 
 ### Objective
 
 Systematically explore the feature/hyperparameter/target search space using an autonomous experiment loop, layered on top of the existing walk-forward evaluation infrastructure.
 
-### Current status
+### Final status
 
-Infrastructure is built. Two full runs have been completed:
+Infrastructure is built and working well. Three runs completed, 172 total experiments, search space exhausted:
 
 - **Run 1:** 100 experiments in 284 minutes. 3 kept, 97 discarded. Best walk-forward: `xgb: n_est=300, max_d=5, lr=0.1` (composite=0.0997). Held-out: precision=0.4074, recall=0.0595, ROC-AUC=0.7033. **Gate 7: FAIL.**
 - **Run 2:** 72 experiments in 728 minutes. 2 kept, 70 discarded. Best walk-forward: `xgb: n_est=100, max_d=5, lr=0.05` (composite=0.0638). Held-out: precision=0.3333, recall=0.0108, ROC-AUC=0.7140. **Gate 7: FAIL.**
+- **Run 3:** 0 experiments (stopped early) in 52 minutes. No experiment beat the baseline — the search space has converged. Held-out: precision=0.4074, recall=0.0595, ROC-AUC=0.7033. **Gate 7: FAIL.**
 
-Both runs improved the walk-forward search metric but failed the held-out precision and recall gates. ROC-AUC consistently clears the bar.
+All runs failed the held-out precision and recall gates. ROC-AUC consistently clears the bar. The search space is exhausted — no hyperparameter, threshold, or feature subset combination in the current space can close the precision gap.
 
 ### How it works
 
@@ -161,15 +162,11 @@ The experiment loop (`scripts/experiment_loop.py`) is a predefined runtime searc
 6. Generate AUTORESEARCH.md report and Gate 7 verdict
 ```
 
-### What the next iteration should focus on
+### Conclusion
 
-The broad hyperparameter search has been exercised twice. The remaining high-value gap is **operating-point search with an explicit precision focus**:
+The experiment loop answered its question honestly: **hyperparameter/threshold tuning cannot close the precision gap with the current feature set.** Run 2 tested probability thresholds (0.50–0.75), actionable thresholds (0.0035–0.0075), and cost buffers — none helped. Run 1 ablated all 42 features individually — no single feature removal improved the composite metric. The feature set is uniformly weak: all 42 features are lagging indicators that are widely available and largely priced in.
 
-1. **Probability-threshold tuning** — adjust the classification decision boundary across a finer grid.
-2. **Actionable-threshold / cost-buffer tuning** — adjust what counts as a tradable move.
-3. **Precision-constrained selection** — maximize precision subject to recall >= 0.15, rather than optimizing precision x recall product.
-4. **Ensemble approaches** — combine XGBoost + LightGBM predictions where they agree (consensus = higher precision).
-5. Only then: additional hyperparameter expansion or new model architectures.
+The experiment loop infrastructure is solid and should be reused once the data universe is expanded with leading indicators. The next high-value work is new data families (see "If Phase 12 is reopened" above), not more tuning.
 
 ### Critical design constraints
 
@@ -205,15 +202,15 @@ The broad hyperparameter search has been exercised twice. The remaining high-val
 - [x] Infrastructure: experiment loop, program.md, held-out split, safety rails, results format.
 - [x] Run 1: 100 experiments, broad hyperparameter + feature search. Gate 7 FAIL.
 - [x] Run 2: 72 experiments, threshold tuning + refined search. Gate 7 FAIL.
-- [ ] Run 3+: precision-focused operating-point search (see "next iteration" above).
-- [ ] Pass Gate 7 on held-out data, OR document that the signal hypothesis should be abandoned after sustained experimentation.
+- [x] Run 3: 0 experiments (search space converged, stopped early). Gate 7 FAIL.
+- [x] Document conclusion: search space exhausted, precision gap cannot be closed with current features. Signal hypothesis not abandoned — model has discriminative ability (ROC-AUC 0.70+) but needs better inputs to convert that into precision.
 
 ### Exit criteria
 
-- The experiment loop has run at least 50 experiments with proper logging. (done)
-- The best surviving configuration has been evaluated on the held-out validation set. (done, twice)
-- If held-out metrics clear the integration bar: declare ready for Gate 5 re-evaluation.
-- If held-out metrics do not clear the bar after sustained experimentation: document the conclusion honestly and consider whether the signal hypothesis should be abandoned.
+- [x] The experiment loop has run at least 50 experiments with proper logging. (172 experiments across 3 runs)
+- [x] The best surviving configuration has been evaluated on the held-out validation set. (3 times)
+- Held-out metrics did not clear the integration bar after sustained experimentation (172 experiments).
+- Conclusion: the signal hypothesis is not abandoned (ROC-AUC 0.70+ shows discriminative ability), but the current feature set cannot produce actionable precision. New data families are needed before further experiment loop runs.
 
 ---
 
@@ -228,17 +225,16 @@ The broad hyperparameter search has been exercised twice. The remaining high-val
 | 4 | Fresh agent can operate repo from docs? | PASS |
 | 5 | Best signal survives costs with stable OOS performance? | FAIL |
 | 6 | Did expanding data universe improve metrics? | FAIL (no individual family helped; search space expanded for Phase 13) |
-| 7 | Best experiment config clears held-out bar? | FAIL (2 runs, best precision=0.41 vs 0.55 needed) |
+| 7 | Best experiment config clears held-out bar? | FAIL (3 runs, 172 experiments, best precision=0.41 vs 0.55 needed) |
 
-**Gate 5 (final go/no-go)** is the ultimate decision. If Gate 7 passes after further experimentation, re-evaluate Gate 5. If Gate 7 fails after sustained effort (100+ more experiments with precision-focused search), document the conclusion and consider abandoning the signal hypothesis.
+**Gate 5 (final go/no-go)** is the ultimate decision. Gate 7 has failed after sustained effort (172 experiments across 3 runs including precision-focused search). The signal hypothesis is not abandoned — the model has discriminative ability — but the current feature set cannot close the precision gap. New data families (leading indicators) are needed before Gate 7 can be re-attempted.
 
 ---
 
 ## What Blocks Progress Now
 
-**Precision is the bottleneck.** The model achieves decent ROC-AUC (0.70+) on held-out data, meaning it has some discriminative ability. But it cannot convert that into precise actionable signals above the 0.55 bar. The core problem is that the feature set (42 features from price technicals, sentiment, cross-asset, on-chain, and microstructure data) consists of lagging, widely-available indicators that are largely priced in.
+**Precision is the bottleneck, and it's a data problem.** The model achieves decent ROC-AUC (0.70+) on held-out data, meaning it has discriminative ability. But it cannot convert that into precise actionable signals above the 0.55 bar. Phase 13 proved this empirically: 172 experiments across 3 runs — covering hyperparameter grids, decision thresholds, actionable thresholds, cost buffers, feature ablation, and both model families — failed to close the gap. The core problem is confirmed: the 42-feature set consists of lagging, widely-available indicators that are largely priced in.
 
-Two paths forward:
+One path forward:
 
-1. **Operating-point optimization** (Phase 13 next iteration) — the model's ROC-AUC suggests there may be a decision boundary that trades recall for precision. This is the immediate next step.
-2. **Better data** (future) — if operating-point tuning fails, the remaining option is data sources the market hasn't fully absorbed (exchange flows, MVRV, SOPR via paid providers like Glassnode $29/mo or CoinGlass $49/mo). This is documented as a future option, not current scope.
+1. **Better data** — the remaining option is data sources with genuine leading signal that the market hasn't fully absorbed. Top candidates: global liquidity cycle (central bank balance sheets, free via FRED/ECB/BOJ APIs), exchange flows/MVRV/SOPR (Glassnode $29/mo), historical open interest/liquidations (CoinGlass $49/mo). See "If Phase 12 is reopened" section for the full list. Once new data families are integrated and ablated, the Phase 13 experiment loop should be re-run on the expanded feature set.

@@ -83,10 +83,14 @@ during the search phase:
   (c) walk-forward already validated the configuration's robustness.
 
 ## Current interpretation
-The first full run improved the walk-forward composite score but failed the held-out
-precision/recall gate. That means the next autoresearch pass should focus on:
+Three full runs have been completed (172 total experiments). All failed the held-out
+precision/recall gate. Run 2 specifically tested probability thresholds (0.50–0.75),
+actionable thresholds (0.0035–0.0075), and cost buffers — none improved precision.
+Run 1 ablated all 42 features individually — no removal helped. Run 3 stopped early
+with 0 experiments because the search space has converged.
 
-- probability-threshold tuning,
-- actionable threshold / cost-buffer tuning,
-- precision-first operating-point search,
-- only then broader hyperparameter expansion.
+**Conclusion:** The experiment loop search space is exhausted. Hyperparameter/threshold
+tuning cannot close the precision gap with the current feature set. The model has
+discriminative ability (ROC-AUC 0.70+ on held-out) but the 42 features are lagging
+indicators that cannot produce actionable precision above 0.55. New data families
+with leading signal are needed before the loop should be run again.

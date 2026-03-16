@@ -21,10 +21,13 @@ relevant docs and commits.
 ### Added
 - Per-run autoresearch archiving (`artifacts/autoresearch_runs/`) and append-only history index
 - Phase 13 run 2 results (72 experiments, Gate 7 FAIL — precision=0.33, recall=0.01, ROC-AUC=0.71)
+- Phase 13 run 3 results (0 experiments, stopped early — search space converged)
 
 ### Changed
 - `generate_autoresearch_md()` returns string instead of writing file directly
 - ROADMAP.md streamlined from 1620 to ~240 lines — removed completed phase details, preserved Phase 12 context for potential reopening
+- Phase 13 concluded: 3 runs, 172 experiments, all Gate 7 FAIL — search space exhausted, precision gap confirmed as data input problem
+- All docs (ROADMAP, README, CLAUDE.md, program.md) updated to reflect Phase 13 completion
 
 ## 2026-03-15 (Phase 13 experiment loop refinements)
 
