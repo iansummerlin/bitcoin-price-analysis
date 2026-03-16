@@ -101,3 +101,77 @@ run_id	experiment_id	model_name	composite_metric	precision	recall	roc_auc	f1	win
 2026-03-15T16:39:26Z	99	lightgbm_direction	0.019140	0.2924	0.0655	0.6099	0.0768	92	1	discard	insufficient improvement (-0.080515 < 0.005)	lgbm: drop tx_volume_zscore_7d
 2026-03-15T16:39:26Z	100	lightgbm_direction	0.019236	0.2937	0.0655	0.6113	0.0750	92	1	discard	insufficient improvement (-0.080420 < 0.005)	lgbm: drop hashrate_price_divergence
 2026-03-15T16:39:26Z	999	xgboost_direction	0.024224	0.4074	0.0595	0.7033	0.1038	1	0	held_out_final	final validation	HELD-OUT: xgb: n_est=300, max_d=5, lr=0.1
+2026-03-16T02:01:29Z	0	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	0	baseline	initial baseline	BASELINE: phase13 candidate baseline: xgb n_est=300, max_d=5, lr=0.1
+2026-03-16T02:01:29Z	1	xgboost_direction	0.075360	0.2248	0.3352	0.5598	0.2329	92	13	discard	insufficient precision-first improvement (+0.000020 < 0.005)	xgb: n_est=50, max_d=6, lr=0.15
+2026-03-16T02:01:29Z	2	xgboost_direction	0.000446	0.0853	0.0052	0.6173	0.0083	92	0	discard	insufficient precision-first improvement (-0.224345 < 0.005)	xgb: n_est=100, max_d=3, lr=0.01
+2026-03-16T02:01:29Z	3	xgboost_direction	0.035428	0.3029	0.1169	0.6032	0.1152	92	4	discard	insufficient precision-first improvement (-0.189362 < 0.005)	xgb: n_est=100, max_d=3, lr=0.05
+2026-03-16T02:01:29Z	4	xgboost_direction	0.059837	0.2486	0.2407	0.5848	0.1769	92	16	keep	selection improvement +0.023782, composite -0.039819, 16/92 windows improved	xgb: n_est=100, max_d=3, lr=0.1
+2026-03-16T02:01:29Z	5	xgboost_direction	0.003320	0.2084	0.0159	0.5937	0.0234	92	2	discard	insufficient precision-first improvement (-0.245252 < 0.005)	xgb: n_est=100, max_d=5, lr=0.01
+2026-03-16T02:01:29Z	6	xgboost_direction	0.063771	0.2760	0.2311	0.5766	0.1801	92	48	keep	selection improvement +0.027426, composite +0.003934, 48/92 windows improved	xgb: n_est=100, max_d=5, lr=0.05
+2026-03-16T02:01:29Z	7	xgboost_direction	0.079201	0.2415	0.3279	0.5655	0.2264	92	73	discard	insufficient precision-first improvement (-0.034494 < 0.005)	xgb: n_est=100, max_d=5, lr=0.1
+2026-03-16T02:01:29Z	8	xgboost_direction	0.016869	0.2839	0.0594	0.6099	0.0637	92	3	discard	insufficient precision-first improvement (-0.259130 < 0.005)	xgb: n_est=300, max_d=3, lr=0.01
+2026-03-16T02:01:29Z	9	xgboost_direction	0.076011	0.2719	0.2795	0.5814	0.2015	92	55	discard	insufficient precision-first improvement (-0.004083 < 0.005)	xgb: n_est=300, max_d=3, lr=0.05
+2026-03-16T02:01:29Z	10	xgboost_direction	0.094462	0.2394	0.3945	0.5625	0.2412	92	79	discard	insufficient precision-first improvement (-0.036553 < 0.005)	xgb: n_est=300, max_d=3, lr=0.1
+2026-03-16T02:01:29Z	11	xgboost_direction	0.038059	0.2848	0.1336	0.5854	0.1276	92	11	discard	insufficient precision-first improvement (-0.237940 < 0.005)	xgb: n_est=300, max_d=5, lr=0.01
+2026-03-16T02:01:29Z	12	xgboost_direction	0.090141	0.2366	0.3810	0.5610	0.2436	92	84	discard	insufficient precision-first improvement (-0.039412 < 0.005)	xgb: n_est=300, max_d=5, lr=0.05
+2026-03-16T02:01:29Z	13	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	84	discard	insufficient precision-first improvement (-0.051208 < 0.005)	xgb: n_est=300, max_d=5, lr=0.1
+2026-03-16T02:01:29Z	14	xgboost_direction	0.079158	0.2470	0.3204	0.5711	0.2216	92	69	discard	insufficient precision-first improvement (-0.028952 < 0.005)	xgb: n_est=500, max_d=4, lr=0.03
+2026-03-16T02:01:29Z	15	lightgbm_direction	0.029276	0.3202	0.0914	0.5881	0.1129	92	21	discard	insufficient precision-first improvement (-0.246722 < 0.005)	lgbm: n_est=50, max_d=-1, lr=0.1, leaves=63
+2026-03-16T02:01:29Z	16	lightgbm_direction	0.000023	0.0247	0.0009	0.6276	0.0018	92	0	discard	insufficient precision-first improvement (-0.275975 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.01, leaves=15
+2026-03-16T02:01:29Z	17	lightgbm_direction	0.000023	0.0247	0.0009	0.6276	0.0018	92	0	discard	insufficient precision-first improvement (-0.275975 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.01, leaves=31
+2026-03-16T02:01:29Z	18	lightgbm_direction	0.008123	0.2324	0.0349	0.6231	0.0469	92	2	discard	insufficient precision-first improvement (-0.267876 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.05, leaves=15
+2026-03-16T02:01:29Z	19	lightgbm_direction	0.008123	0.2324	0.0349	0.6231	0.0469	92	2	discard	insufficient precision-first improvement (-0.267876 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.05, leaves=31
+2026-03-16T02:01:29Z	20	lightgbm_direction	0.018495	0.2664	0.0694	0.6085	0.0798	92	13	discard	insufficient precision-first improvement (-0.257503 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.1, leaves=15
+2026-03-16T02:01:29Z	21	lightgbm_direction	0.018495	0.2664	0.0694	0.6085	0.0798	92	13	discard	insufficient precision-first improvement (-0.257503 < 0.005)	lgbm: n_est=100, max_d=3, lr=0.1, leaves=31
+2026-03-16T02:01:29Z	22	lightgbm_direction	0.000140	0.0613	0.0023	0.6230	0.0043	92	0	discard	insufficient precision-first improvement (-0.275859 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.01, leaves=15
+2026-03-16T02:01:29Z	23	lightgbm_direction	0.000238	0.0731	0.0033	0.6174	0.0060	92	0	discard	insufficient precision-first improvement (-0.275761 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.01, leaves=31
+2026-03-16T02:01:29Z	24	lightgbm_direction	0.018559	0.3259	0.0569	0.6137	0.0715	92	12	discard	insufficient precision-first improvement (-0.257439 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.05, leaves=15
+2026-03-16T02:01:29Z	25	lightgbm_direction	0.020534	0.3331	0.0616	0.6081	0.0794	92	15	discard	insufficient precision-first improvement (-0.255464 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.05, leaves=31
+2026-03-16T02:01:29Z	26	lightgbm_direction	0.026156	0.2770	0.0944	0.5938	0.1074	92	18	discard	insufficient precision-first improvement (-0.249843 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.1, leaves=15
+2026-03-16T02:01:29Z	27	lightgbm_direction	0.029797	0.2873	0.1037	0.5907	0.1171	92	21	discard	insufficient precision-first improvement (-0.246201 < 0.005)	lgbm: n_est=100, max_d=5, lr=0.1, leaves=31
+2026-03-16T02:01:29Z	28	lightgbm_direction	0.000059	0.0366	0.0016	0.6229	0.0030	92	0	discard	insufficient precision-first improvement (-0.275939 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.01, leaves=15
+2026-03-16T02:01:29Z	29	lightgbm_direction	0.000150	0.0574	0.0026	0.6146	0.0049	92	0	discard	insufficient precision-first improvement (-0.275849 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.01, leaves=31
+2026-03-16T02:01:29Z	30	lightgbm_direction	0.012153	0.2615	0.0465	0.6124	0.0625	92	5	discard	insufficient precision-first improvement (-0.263846 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.05, leaves=15
+2026-03-16T02:01:29Z	31	lightgbm_direction	0.020961	0.3192	0.0657	0.6002	0.0862	92	17	discard	insufficient precision-first improvement (-0.255037 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.05, leaves=31
+2026-03-16T02:01:29Z	32	lightgbm_direction	0.023710	0.2845	0.0833	0.5922	0.1028	92	16	discard	insufficient precision-first improvement (-0.252289 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.1, leaves=15
+2026-03-16T02:01:29Z	33	lightgbm_direction	0.028879	0.2582	0.1118	0.5838	0.1244	92	22	discard	insufficient precision-first improvement (-0.247119 < 0.005)	lgbm: n_est=100, max_d=-1, lr=0.1, leaves=31
+2026-03-16T02:01:29Z	34	lightgbm_direction	0.002787	0.1983	0.0141	0.6287	0.0236	92	0	discard	insufficient precision-first improvement (-0.273211 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.01, leaves=15
+2026-03-16T02:01:29Z	35	lightgbm_direction	0.002787	0.1983	0.0141	0.6287	0.0236	92	0	discard	insufficient precision-first improvement (-0.273211 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.01, leaves=31
+2026-03-16T02:01:29Z	36	lightgbm_direction	0.024344	0.2857	0.0852	0.5996	0.0962	92	15	discard	insufficient precision-first improvement (-0.251654 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.05, leaves=15
+2026-03-16T02:01:29Z	37	lightgbm_direction	0.024344	0.2857	0.0852	0.5996	0.0962	92	15	discard	insufficient precision-first improvement (-0.251654 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.05, leaves=31
+2026-03-16T02:01:29Z	38	lightgbm_direction	0.039444	0.2979	0.1324	0.5799	0.1332	92	30	discard	insufficient precision-first improvement (-0.236555 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.1, leaves=15
+2026-03-16T02:01:29Z	39	lightgbm_direction	0.039444	0.2979	0.1324	0.5799	0.1332	92	30	discard	insufficient precision-first improvement (-0.236555 < 0.005)	lgbm: n_est=300, max_d=3, lr=0.1, leaves=31
+2026-03-16T02:01:29Z	40	lightgbm_direction	0.008838	0.2765	0.0320	0.6229	0.0455	92	6	discard	insufficient precision-first improvement (-0.267161 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.01, leaves=15
+2026-03-16T02:01:29Z	41	lightgbm_direction	0.009030	0.2702	0.0334	0.6155	0.0475	92	6	discard	insufficient precision-first improvement (-0.266968 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.01, leaves=31
+2026-03-16T02:01:29Z	42	lightgbm_direction	0.033267	0.3034	0.1097	0.5877	0.1203	92	22	discard	insufficient precision-first improvement (-0.242732 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.05, leaves=15
+2026-03-16T02:01:29Z	43	lightgbm_direction	0.032064	0.2734	0.1173	0.5833	0.1286	92	31	discard	insufficient precision-first improvement (-0.243934 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.05, leaves=31
+2026-03-16T02:01:29Z	44	lightgbm_direction	0.038237	0.2557	0.1495	0.5726	0.1487	92	34	discard	insufficient precision-first improvement (-0.237761 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.1, leaves=15
+2026-03-16T02:01:29Z	45	lightgbm_direction	0.039025	0.2508	0.1556	0.5688	0.1525	92	36	discard	insufficient precision-first improvement (-0.025178 < 0.005)	lgbm: n_est=300, max_d=5, lr=0.1, leaves=31
+2026-03-16T02:01:29Z	46	lightgbm_direction	0.006724	0.2652	0.0254	0.6204	0.0379	92	4	discard	insufficient precision-first improvement (-0.269275 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.01, leaves=15
+2026-03-16T02:01:29Z	47	lightgbm_direction	0.011462	0.3014	0.0380	0.6106	0.0548	92	5	discard	insufficient precision-first improvement (-0.264537 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.01, leaves=31
+2026-03-16T02:01:29Z	48	lightgbm_direction	0.028999	0.2897	0.1001	0.5873	0.1130	92	18	discard	insufficient precision-first improvement (-0.246999 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.05, leaves=15
+2026-03-16T02:01:29Z	49	lightgbm_direction	0.032530	0.2993	0.1087	0.5806	0.1218	92	27	discard	insufficient precision-first improvement (-0.243469 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.05, leaves=31
+2026-03-16T02:01:29Z	50	lightgbm_direction	0.033927	0.2578	0.1316	0.5699	0.1394	92	31	discard	insufficient precision-first improvement (-0.242072 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.1, leaves=15
+2026-03-16T02:01:29Z	51	lightgbm_direction	0.032389	0.2462	0.1315	0.5705	0.1372	92	27	discard	insufficient precision-first improvement (-0.243610 < 0.005)	lgbm: n_est=300, max_d=-1, lr=0.1, leaves=31
+2026-03-16T02:01:29Z	52	lightgbm_direction	0.033469	0.3196	0.1047	0.5920	0.1164	92	21	discard	insufficient precision-first improvement (-0.242530 < 0.005)	lgbm: n_est=500, max_d=4, lr=0.03, leaves=31
+2026-03-16T02:01:29Z	53	xgboost_direction	0.092981	0.2273	0.4090	0.5521	0.2493	92	81	discard	insufficient precision-first improvement (-0.048672 < 0.005)	candidate: decision_threshold=0.55
+2026-03-16T02:01:29Z	54	xgboost_direction	0.086720	0.2295	0.3779	0.5521	0.2380	92	80	discard	insufficient precision-first improvement (-0.046518 < 0.005)	candidate: decision_threshold=0.60
+2026-03-16T02:01:29Z	55	xgboost_direction	0.082890	0.2370	0.3497	0.5521	0.2277	92	75	discard	insufficient precision-first improvement (-0.038983 < 0.005)	candidate: decision_threshold=0.65
+2026-03-16T02:01:29Z	56	xgboost_direction	0.073653	0.2309	0.3190	0.5521	0.2130	92	65	discard	insufficient precision-first improvement (-0.045102 < 0.005)	candidate: decision_threshold=0.70
+2026-03-16T02:01:29Z	57	xgboost_direction	0.066924	0.2309	0.2899	0.5521	0.2021	92	60	discard	insufficient precision-first improvement (-0.045125 < 0.005)	candidate: decision_threshold=0.75
+2026-03-16T02:01:29Z	58	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	84	discard	insufficient precision-first improvement (-0.051208 < 0.005)	candidate: actionable_threshold=0.0045
+2026-03-16T02:01:29Z	59	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	84	discard	insufficient precision-first improvement (-0.051208 < 0.005)	candidate: actionable_threshold=0.0055
+2026-03-16T02:01:29Z	60	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	84	discard	insufficient precision-first improvement (-0.051208 < 0.005)	candidate: actionable_threshold=0.0065
+2026-03-16T02:01:29Z	61	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	84	discard	insufficient precision-first improvement (-0.051208 < 0.005)	candidate: actionable_threshold=0.0075
+2026-03-16T02:01:29Z	62	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	84	discard	insufficient precision-first improvement (-0.051208 < 0.005)	candidate: cost_buffer=0.0045
+2026-03-16T02:01:29Z	63	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	84	discard	insufficient precision-first improvement (-0.051208 < 0.005)	candidate: cost_buffer=0.0055
+2026-03-16T02:01:29Z	64	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	84	discard	insufficient precision-first improvement (-0.051208 < 0.005)	candidate: cost_buffer=0.0065
+2026-03-16T02:01:29Z	65	xgboost_direction	0.092981	0.2273	0.4090	0.5521	0.2493	92	81	discard	insufficient precision-first improvement (-0.048672 < 0.005)	candidate: actionable_threshold=0.0035, decision_threshold=0.55
+2026-03-16T02:01:29Z	66	xgboost_direction	0.086720	0.2295	0.3779	0.5521	0.2380	92	80	discard	insufficient precision-first improvement (-0.046518 < 0.005)	candidate: actionable_threshold=0.0035, decision_threshold=0.60
+2026-03-16T02:01:29Z	67	xgboost_direction	0.082890	0.2370	0.3497	0.5521	0.2277	92	75	discard	insufficient precision-first improvement (-0.038983 < 0.005)	candidate: actionable_threshold=0.0035, decision_threshold=0.65
+2026-03-16T02:01:29Z	68	xgboost_direction	0.073653	0.2309	0.3190	0.5521	0.2130	92	65	discard	insufficient precision-first improvement (-0.045102 < 0.005)	candidate: actionable_threshold=0.0035, decision_threshold=0.70
+2026-03-16T02:01:29Z	69	xgboost_direction	0.066924	0.2309	0.2899	0.5521	0.2021	92	60	discard	insufficient precision-first improvement (-0.045125 < 0.005)	candidate: actionable_threshold=0.0035, decision_threshold=0.75
+2026-03-16T02:01:29Z	70	xgboost_direction	0.099656	0.2248	0.4433	0.5521	0.2620	92	84	discard	insufficient precision-first improvement (-0.051208 < 0.005)	candidate: actionable_threshold=0.0045, decision_threshold=0.50
+2026-03-16T02:01:29Z	71	xgboost_direction	0.092981	0.2273	0.4090	0.5521	0.2493	92	81	discard	insufficient precision-first improvement (-0.048672 < 0.005)	candidate: actionable_threshold=0.0045, decision_threshold=0.55
+2026-03-16T02:01:29Z	72	xgboost_direction	0.086720	0.2295	0.3779	0.5521	0.2380	92	80	discard	insufficient precision-first improvement (-0.046518 < 0.005)	candidate: actionable_threshold=0.0045, decision_threshold=0.60
+2026-03-16T02:01:29Z	999	xgboost_direction	0.003604	0.3333	0.0108	0.7140	0.0209	1	0	held_out_final	final validation	HELD-OUT: xgb: n_est=100, max_d=5, lr=0.05

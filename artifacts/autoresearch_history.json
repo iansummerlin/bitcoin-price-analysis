@@ -1,0 +1,72 @@
+[
+  {
+    "phase": "13",
+    "run_id": "2026-03-16T02:01:29Z",
+    "generated_at": "2026-03-16T13:19:59.197185+00:00",
+    "stopped_early": false,
+    "experiments_run": 72,
+    "experiments_kept": 2,
+    "experiments_discarded": 70,
+    "elapsed_minutes": 728.4,
+    "baseline_model": "xgboost_direction",
+    "baseline_description": "phase13 candidate baseline: xgb n_est=300, max_d=5, lr=0.1",
+    "baseline_selection_score": 0.22479,
+    "baseline_composite": 0.099656,
+    "baseline_scores": {
+      "directional_accuracy": 0.5928,
+      "precision": 0.2248,
+      "recall": 0.4433,
+      "f1": 0.262,
+      "positive_rate": 0.3988,
+      "roc_auc": 0.5521,
+      "composite": 0.0997
+    },
+    "reviewed_baseline_scores": {
+      "directional_accuracy": 0.7715,
+      "precision": 0.3029,
+      "recall": 0.1169,
+      "f1": 0.1152,
+      "positive_rate": 0.0912,
+      "roc_auc": 0.6032,
+      "composite": 0.0354
+    },
+    "phase13_candidate_baseline_scores": {
+      "directional_accuracy": 0.5928,
+      "precision": 0.2248,
+      "recall": 0.4433,
+      "f1": 0.262,
+      "positive_rate": 0.3988,
+      "roc_auc": 0.5521,
+      "composite": 0.0997
+    },
+    "best_selection_score": 0.275999,
+    "best_experiment_composite": 0.063771,
+    "best_experiment_config": "xgb: n_est=100, max_d=5, lr=0.05",
+    "best_experiment_scores": {
+      "precision": 0.276,
+      "recall": 0.2311,
+      "roc_auc": 0.5766,
+      "f1": 0.1801,
+      "composite": 0.0638
+    },
+    "held_out_scores": {
+      "directional_accuracy": 0.8269,
+      "precision": 0.3333,
+      "recall": 0.0108,
+      "f1": 0.0209,
+      "positive_rate": 0.0056,
+      "roc_auc": 0.714
+    },
+    "held_out_composite": 0.003604,
+    "gate_7": {
+      "precision_pass": false,
+      "recall_pass": false,
+      "roc_auc_pass": true,
+      "overall": false
+    },
+    "conclusion": "FAIL: Best configuration does not clear all integration thresholds. Repo remains research-only.",
+    "latest_report_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/AUTORESEARCH.md",
+    "archived_report_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/artifacts/autoresearch_runs/2026-03-16T02:01:29Z.md",
+    "archived_summary_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/artifacts/autoresearch_runs/2026-03-16T02:01:29Z.summary.json"
+  }
+]
