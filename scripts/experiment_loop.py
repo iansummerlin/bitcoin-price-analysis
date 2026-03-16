@@ -77,9 +77,13 @@ logger = logging.getLogger(__name__)
 RESULTS_PATH = PROJECT_ROOT / "results.tsv"
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 AUTORESEARCH_PATH = PROJECT_ROOT / "AUTORESEARCH.md"
+AUTORESEARCH_RUNS_DIR = ARTIFACTS_DIR / "autoresearch_runs"
+AUTORESEARCH_HISTORY_PATH = ARTIFACTS_DIR / "autoresearch_history.json"
+AUTORESEARCH_HISTORY_MD_PATH = PROJECT_ROOT / "AUTORESEARCH_HISTORY.md"
 CHECKPOINT_PATH = Path(os.environ.get("CHECKPOINT_PATH", str(ARTIFACTS_DIR / "experiment_checkpoint.json")))
 STOP_FLAG_PATH = os.environ.get("STOP_FLAG_PATH", "")
 PROGRESS_INTERVAL = 10
+MAX_AUTORESEARCH_HISTORY_ENTRIES = 50
 
 
 @dataclass
@@ -369,6 +373,46 @@ def load_results() -> list[dict]:
         for row in reader:
             results.append(row)
     return results
+
+
+def load_autoresearch_history(path: Path = AUTORESEARCH_HISTORY_PATH) -> list[dict]:
+    """Load append-only run-level autoresearch history."""
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def save_autoresearch_history(entries: list[dict], path: Path = AUTORESEARCH_HISTORY_PATH) -> None:
+    """Persist append-only run-level autoresearch history."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+
+
+def generate_autoresearch_history_md(history: list[dict]) -> str:
+    """Generate a markdown index of archived autoresearch runs."""
+    lines = [
+        "# Autoresearch History",
+        "",
+        "*Auto-generated from `artifacts/autoresearch_history.json` — do not edit manually.*",
+        "",
+    ]
+    if not history:
+        lines.append("No autoresearch runs recorded yet.")
+        return "\n".join(lines) + "\n"
+
+    lines.append("| # | Run ID | Generated | Best Config | Precision | Recall | ROC-AUC | Gate 7 | Stopped Early |")
+    lines.append("|---|--------|-----------|-------------|-----------|--------|---------|--------|---------------|")
+    for idx, entry in enumerate(history, start=1):
+        held = entry.get("held_out_scores", {})
+        gate = entry.get("gate_7", {})
+        lines.append(
+            f"| {idx} | {entry.get('run_id', '-')} | {entry.get('generated_at', '-')[:19]} | "
+            f"{entry.get('best_experiment_config', '-')} | "
+            f"{held.get('precision', 0):.4f} | {held.get('recall', 0):.4f} | {held.get('roc_auc', 0):.4f} | "
+            f"{'PASS' if gate.get('overall') else 'FAIL'} | "
+            f"{'yes' if entry.get('stopped_early') else 'no'} |"
+        )
+    return "\n".join(lines) + "\n"
 
 
 def save_result(result: ExperimentResult, run_id: str = "") -> None:
@@ -737,8 +781,8 @@ def generate_autoresearch_md(
     total_experiments: int,
     kept_count: int,
     discarded_count: int,
-) -> None:
-    """Generate AUTORESEARCH.md with a full run report."""
+) -> str:
+    """Generate autoresearch markdown content for the latest run."""
     lines: list[str] = []
     lines.append("# Autoresearch Report")
     lines.append("")
@@ -839,8 +883,7 @@ def generate_autoresearch_md(
         lines.append("The repo remains research-only.")
     lines.append("")
 
-    AUTORESEARCH_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    logger.info("AUTORESEARCH.md written to %s", AUTORESEARCH_PATH)
+    return "\n".join(lines) + "\n"
 
 
 def main() -> None:
@@ -1293,11 +1336,8 @@ def main() -> None:
 
     summary_path = ARTIFACTS_DIR / "phase13_experiment_summary.json"
     summary_path.parent.mkdir(parents=True, exist_ok=True)
-    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    logger.info("Summary saved to %s", summary_path)
 
-    # Generate AUTORESEARCH.md
-    generate_autoresearch_md(
+    autoresearch_md = generate_autoresearch_md(
         run_timestamp=datetime.now(timezone.utc).isoformat(),
         elapsed_minutes=elapsed / 60,
         baseline_model=baseline_model,
@@ -1321,6 +1361,31 @@ def main() -> None:
         total_experiments=kept_count + discarded_count,
         kept_count=kept_count,
         discarded_count=discarded_count,
+    )
+    AUTORESEARCH_PATH.write_text(autoresearch_md, encoding="utf-8")
+    logger.info("AUTORESEARCH.md written to %s", AUTORESEARCH_PATH)
+
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    logger.info("Summary saved to %s", summary_path)
+
+    # Archive per-run markdown + summary and append run-level history.
+    AUTORESEARCH_RUNS_DIR.mkdir(parents=True, exist_ok=True)
+    archived_md_path = AUTORESEARCH_RUNS_DIR / f"{run_id}.md"
+    archived_summary_path = AUTORESEARCH_RUNS_DIR / f"{run_id}.summary.json"
+    archived_md_path.write_text(autoresearch_md, encoding="utf-8")
+    archived_summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+
+    history = load_autoresearch_history()
+    history_entry = dict(summary)
+    history_entry["latest_report_path"] = str(AUTORESEARCH_PATH.resolve())
+    history_entry["archived_report_path"] = str(archived_md_path.resolve())
+    history_entry["archived_summary_path"] = str(archived_summary_path.resolve())
+    history.insert(0, history_entry)
+    history = history[:MAX_AUTORESEARCH_HISTORY_ENTRIES]
+    save_autoresearch_history(history)
+    AUTORESEARCH_HISTORY_MD_PATH.write_text(
+        generate_autoresearch_history_md(history),
+        encoding="utf-8",
     )
 
     # Clean up checkpoint on successful completion

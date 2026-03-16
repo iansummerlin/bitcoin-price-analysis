@@ -213,6 +213,7 @@ Artifact validation checks required fields and freshness before a downstream rep
 Current generated artifacts live in `artifacts/` (plus `BACKTEST.md` at the repo root):
 
 - `backtest_history.json` (append-only result log, max 10 entries)
+- `autoresearch_history.json` (append-only run-level Phase 13 history, max 50 entries)
 - `regression_gate_verdict.json` (latest regression gate result)
 - `dataset_metadata.json`
 - `xgboost_direction.joblib`
@@ -222,6 +223,8 @@ Current generated artifacts live in `artifacts/` (plus `BACKTEST.md` at the repo
 - `feature_ablation.json`
 - `model_comparison.json`
 - `latest_signal.json`
+
+Phase 13 also archives per-run reports under `artifacts/autoresearch_runs/`. `AUTORESEARCH.md` is the latest report only; the append-only run history lives in `artifacts/autoresearch_history.json`, with `AUTORESEARCH_HISTORY.md` generated as a human-readable index.
 
 Historical 2025 outputs such as old plots and the legacy ARIMA pickle were removed because they were stale clutter, not evidence.
 
@@ -242,7 +245,7 @@ This repo uses an autonomous AI experiment loop inspired by [Karpathy's autorese
 
 **Metric gaming.** An agent optimizing a single composite metric over many iterations will find configurations that score well on that metric but may not represent robust trading signals. The held-out validation set is the final check against this, but it can only be used once.
 
-**No automatic promotion.** The loop is evidence-generating only. It writes `results.tsv`, artifacts, and `AUTORESEARCH.md`, but it does not update `config.py`, model defaults, or export paths. Any winning configuration must be reviewed and promoted manually.
+**No automatic promotion.** The loop is evidence-generating only. It writes `results.tsv`, run artifacts, `AUTORESEARCH.md`, and archived run history, but it does not update `config.py`, model defaults, or export paths. Any winning configuration must be reviewed and promoted manually.
 
 **Compute cost.** Each experiment runs a full walk-forward evaluation (~10-15 minutes). Running 100 experiments takes ~20 hours. This is a meaningful compute commitment.
 

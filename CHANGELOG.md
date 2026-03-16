@@ -16,6 +16,14 @@ Add entries for:
 Do not use this as a full engineering diary. Prefer short entries linked to the
 relevant docs and commits.
 
+## 2026-03-16
+
+### Added
+- Per-run autoresearch archiving (`artifacts/autoresearch_runs/`) and append-only history index
+
+### Changed
+- `generate_autoresearch_md()` returns string instead of writing file directly
+
 ## 2026-03-15 (Phase 13 experiment loop refinements)
 
 ### Changed

@@ -428,147 +428,110 @@ class TestRunSingleExperiment(unittest.TestCase):
 
 class TestGenerateAutoresearchMd(unittest.TestCase):
     def test_generates_valid_markdown(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            md_path = Path(tmpdir) / "AUTORESEARCH.md"
+        content = generate_autoresearch_md(
+            run_timestamp="2026-03-15T14:00:00+00:00",
+            elapsed_minutes=120.5,
+            baseline_model="xgboost_direction",
+            baseline_description="XGBoost default baseline",
+            baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15, "composite": 0.036},
+            baseline_composite=0.036,
+            reviewed_baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15},
+            candidate_baseline_scores={"precision": 0.22, "recall": 0.03, "roc_auc": 0.62, "f1": 0.05},
+            experiment_results=[
+                ExperimentResult(1, "exp1", "xgboost_direction", 0.05, 0.25, 0.2, 0.58, 0.22, 5, 3, "keep", "good"),
+                ExperimentResult(2, "exp2", "lightgbm_direction", 0.02, 0.15, 0.13, 0.55, 0.14, 5, 1, "discard", "bad"),
+            ],
+            best_experiment=ExperimentResult(1, "exp1", "xgboost_direction", 0.05, 0.25, 0.2, 0.58, 0.22, 5, 3, "keep", "good"),
+            best_config={"description": "exp1", "model_name": "xgboost_direction"},
+            best_composite=0.05,
+            held_out_scores={"precision": 0.2, "recall": 0.18, "roc_auc": 0.58, "f1": 0.19, "directional_accuracy": 0.6},
+            held_out_composite=0.036,
+            gate_pass=False,
+            experiment_rows=70000,
+            held_out_rows=2160,
+            experiment_end="2025-12-13 23:00:00+00:00",
+            held_out_start="2025-12-14 00:00:00+00:00",
+            held_out_end="2026-03-13 23:00:00+00:00",
+            total_experiments=2,
+            kept_count=1,
+            discarded_count=1,
+        )
 
-            import scripts.experiment_loop as loop_mod
-            original = loop_mod.AUTORESEARCH_PATH
-            loop_mod.AUTORESEARCH_PATH = md_path
+        # Check all sections are present
+        self.assertIn("# Autoresearch Report", content)
+        self.assertIn("## Run Info", content)
+        self.assertIn("## Baselines", content)
+        self.assertIn("## Experiments", content)
+        self.assertIn("## Best Configuration", content)
+        self.assertIn("## Held-Out Validation", content)
+        self.assertIn("## Gate 7 Verdict", content)
 
-            try:
-                generate_autoresearch_md(
-                    run_timestamp="2026-03-15T14:00:00+00:00",
-                    elapsed_minutes=120.5,
-                    baseline_model="xgboost_direction",
-                    baseline_description="XGBoost default baseline",
-                    baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15, "composite": 0.036},
-                    baseline_composite=0.036,
-                    reviewed_baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15},
-                    candidate_baseline_scores={"precision": 0.22, "recall": 0.03, "roc_auc": 0.62, "f1": 0.05},
-                    experiment_results=[
-                        ExperimentResult(1, "exp1", "xgboost_direction", 0.05, 0.25, 0.2, 0.58, 0.22, 5, 3, "keep", "good"),
-                        ExperimentResult(2, "exp2", "lightgbm_direction", 0.02, 0.15, 0.13, 0.55, 0.14, 5, 1, "discard", "bad"),
-                    ],
-                    best_experiment=ExperimentResult(1, "exp1", "xgboost_direction", 0.05, 0.25, 0.2, 0.58, 0.22, 5, 3, "keep", "good"),
-                    best_config={"description": "exp1", "model_name": "xgboost_direction"},
-                    best_composite=0.05,
-                    held_out_scores={"precision": 0.2, "recall": 0.18, "roc_auc": 0.58, "f1": 0.19, "directional_accuracy": 0.6},
-                    held_out_composite=0.036,
-                    gate_pass=False,
-                    experiment_rows=70000,
-                    held_out_rows=2160,
-                    experiment_end="2025-12-13 23:00:00+00:00",
-                    held_out_start="2025-12-14 00:00:00+00:00",
-                    held_out_end="2026-03-13 23:00:00+00:00",
-                    total_experiments=2,
-                    kept_count=1,
-                    discarded_count=1,
-                )
-            finally:
-                loop_mod.AUTORESEARCH_PATH = original
-
-            self.assertTrue(md_path.exists())
-            content = md_path.read_text()
-
-            # Check all sections are present
-            self.assertIn("# Autoresearch Report", content)
-            self.assertIn("## Run Info", content)
-            self.assertIn("## Baselines", content)
-            self.assertIn("## Experiments", content)
-            self.assertIn("## Best Configuration", content)
-            self.assertIn("## Held-Out Validation", content)
-            self.assertIn("## Gate 7 Verdict", content)
-
-            # Check key data is present
-            self.assertIn("2026-03-15", content)
-            self.assertIn("120.5 minutes", content)
-            self.assertIn("2 (1 kept", content)
-            self.assertIn("1 kept", content)
-            self.assertIn("exp1", content)
-            self.assertIn("exp2", content)
-            self.assertIn("FAIL", content)  # gate failed
-            self.assertIn("xgboost_direction", content)
+        # Check key data is present
+        self.assertIn("2026-03-15", content)
+        self.assertIn("120.5 minutes", content)
+        self.assertIn("2 (1 kept", content)
+        self.assertIn("1 kept", content)
+        self.assertIn("exp1", content)
+        self.assertIn("exp2", content)
+        self.assertIn("FAIL", content)  # gate failed
+        self.assertIn("xgboost_direction", content)
 
     def test_gate_pass_shows_pass(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            md_path = Path(tmpdir) / "AUTORESEARCH.md"
-
-            import scripts.experiment_loop as loop_mod
-            original = loop_mod.AUTORESEARCH_PATH
-            loop_mod.AUTORESEARCH_PATH = md_path
-
-            try:
-                generate_autoresearch_md(
-                    run_timestamp="2026-03-15T14:00:00+00:00",
-                    elapsed_minutes=60.0,
-                    baseline_model="xgboost_direction",
-                    baseline_description="XGBoost default baseline",
-                    baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15},
-                    baseline_composite=0.036,
-                    reviewed_baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15},
-                    candidate_baseline_scores={"precision": 0.22, "recall": 0.03, "roc_auc": 0.62, "f1": 0.05},
-                    experiment_results=[],
-                    best_experiment=None,
-                    best_config=None,
-                    best_composite=0.036,
-                    held_out_scores={"precision": 0.6, "recall": 0.2, "roc_auc": 0.65, "f1": 0.3, "directional_accuracy": 0.7},
-                    held_out_composite=0.12,
-                    gate_pass=True,
-                    experiment_rows=70000,
-                    held_out_rows=2160,
-                    experiment_end="2025-12-13",
-                    held_out_start="2025-12-14",
-                    held_out_end="2026-03-13",
-                    total_experiments=0,
-                    kept_count=0,
-                    discarded_count=0,
-                )
-            finally:
-                loop_mod.AUTORESEARCH_PATH = original
-
-            content = md_path.read_text()
-            self.assertIn("**PASS**", content)
-            self.assertIn("downstream integration review", content)
+        content = generate_autoresearch_md(
+            run_timestamp="2026-03-15T14:00:00+00:00",
+            elapsed_minutes=60.0,
+            baseline_model="xgboost_direction",
+            baseline_description="XGBoost default baseline",
+            baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15},
+            baseline_composite=0.036,
+            reviewed_baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15},
+            candidate_baseline_scores={"precision": 0.22, "recall": 0.03, "roc_auc": 0.62, "f1": 0.05},
+            experiment_results=[],
+            best_experiment=None,
+            best_config=None,
+            best_composite=0.036,
+            held_out_scores={"precision": 0.6, "recall": 0.2, "roc_auc": 0.65, "f1": 0.3, "directional_accuracy": 0.7},
+            held_out_composite=0.12,
+            gate_pass=True,
+            experiment_rows=70000,
+            held_out_rows=2160,
+            experiment_end="2025-12-13",
+            held_out_start="2025-12-14",
+            held_out_end="2026-03-13",
+            total_experiments=0,
+            kept_count=0,
+            discarded_count=0,
+        )
+        self.assertIn("**PASS**", content)
+        self.assertIn("downstream integration review", content)
 
     def test_no_best_experiment_handled(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            md_path = Path(tmpdir) / "AUTORESEARCH.md"
-
-            import scripts.experiment_loop as loop_mod
-            original = loop_mod.AUTORESEARCH_PATH
-            loop_mod.AUTORESEARCH_PATH = md_path
-
-            try:
-                generate_autoresearch_md(
-                    run_timestamp="2026-03-15T14:00:00+00:00",
-                    elapsed_minutes=10.0,
-                    baseline_model="lightgbm_direction",
-                    baseline_description="LightGBM default baseline",
-                    baseline_scores={"precision": 0.22, "recall": 0.03, "roc_auc": 0.62, "f1": 0.05},
-                    baseline_composite=0.0066,
-                    reviewed_baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15},
-                    candidate_baseline_scores={"precision": 0.22, "recall": 0.03, "roc_auc": 0.62, "f1": 0.05},
-                    experiment_results=[],
-                    best_experiment=None,
-                    best_config=None,
-                    best_composite=0.0066,
-                    held_out_scores={"precision": 0.1, "recall": 0.05, "roc_auc": 0.5, "f1": 0.07, "directional_accuracy": 0.5},
-                    held_out_composite=0.005,
-                    gate_pass=False,
-                    experiment_rows=70000,
-                    held_out_rows=2160,
-                    experiment_end="2025-12-13",
-                    held_out_start="2025-12-14",
-                    held_out_end="2026-03-13",
-                    total_experiments=0,
-                    kept_count=0,
-                    discarded_count=0,
-                )
-            finally:
-                loop_mod.AUTORESEARCH_PATH = original
-
-            content = md_path.read_text()
-            self.assertIn("No experiment improved over the baseline", content)
+        content = generate_autoresearch_md(
+            run_timestamp="2026-03-15T14:00:00+00:00",
+            elapsed_minutes=10.0,
+            baseline_model="lightgbm_direction",
+            baseline_description="LightGBM default baseline",
+            baseline_scores={"precision": 0.22, "recall": 0.03, "roc_auc": 0.62, "f1": 0.05},
+            baseline_composite=0.0066,
+            reviewed_baseline_scores={"precision": 0.3, "recall": 0.12, "roc_auc": 0.6, "f1": 0.15},
+            candidate_baseline_scores={"precision": 0.22, "recall": 0.03, "roc_auc": 0.62, "f1": 0.05},
+            experiment_results=[],
+            best_experiment=None,
+            best_config=None,
+            best_composite=0.0066,
+            held_out_scores={"precision": 0.1, "recall": 0.05, "roc_auc": 0.5, "f1": 0.07, "directional_accuracy": 0.5},
+            held_out_composite=0.005,
+            gate_pass=False,
+            experiment_rows=70000,
+            held_out_rows=2160,
+            experiment_end="2025-12-13",
+            held_out_start="2025-12-14",
+            held_out_end="2026-03-13",
+            total_experiments=0,
+            kept_count=0,
+            discarded_count=0,
+        )
+        self.assertIn("No experiment improved over the baseline", content)
 
 
 class TestHeldOutSplitIsolation(unittest.TestCase):

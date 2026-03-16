@@ -52,6 +52,13 @@ Every experiment is logged to `results.tsv` with columns:
 `roc_auc`, `f1`, `windows_evaluated`, `window_improvements`, `status`, `reason`,
 `description`.
 
+Run-level history is stored separately:
+- `AUTORESEARCH.md` — latest report only
+- `artifacts/autoresearch_runs/<run_id>.md` — archived per-run report
+- `artifacts/autoresearch_runs/<run_id>.summary.json` — archived per-run summary
+- `artifacts/autoresearch_history.json` — append-only run-level index
+- `AUTORESEARCH_HISTORY.md` — generated markdown index
+
 ## Integration thresholds
 - cost-adjusted directional precision >= 0.55
 - cost-adjusted directional recall >= 0.15

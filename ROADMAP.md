@@ -1451,7 +1451,10 @@ file for the current contents.
 - `program.md` — research directives and loop documentation
 - `scripts/experiment_loop.py` — autonomous runner
 - `results.tsv` — experiment log (append-only across runs)
-- `AUTORESEARCH.md` — auto-generated human-readable report (regenerated each run)
+- `AUTORESEARCH.md` — auto-generated latest human-readable report (regenerated each run)
+- `artifacts/autoresearch_history.json` — append-only run-level history
+- `artifacts/autoresearch_runs/` — archived per-run markdown and summary artifacts
+- `AUTORESEARCH_HISTORY.md` — generated index of archived run summaries
 - `Makefile` — `experiment` target
 - `config.py` — held-out validation split and budget config
 
