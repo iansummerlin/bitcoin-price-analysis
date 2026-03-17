@@ -12,7 +12,6 @@ import pandas as pd
 from config import DEFAULT_EVALUATION_MAX_ROWS
 from data.pipeline import build_dataset
 from evaluation.walk_forward import walk_forward_evaluate
-from models.arima_model import ImprovedARIMAModel
 from models.lightgbm_model import LightGBMDirectionModel
 from models.xgboost_model import XGBoostDirectionModel, XGBoostPriceModel
 
@@ -28,18 +27,6 @@ class ComparisonResult:
 
 
 MODEL_SPECS = {
-    "arima_regressor": {
-        "target_column": "target_log_return_1",
-        "train_window": 24 * 30,
-        "test_window": 24 * 15,
-        "rows": 24 * 75,
-        "factory": lambda: ImprovedARIMAModel(
-            feature_columns=["return_1", "return_24", "volatility_24", "atr_pct", "fng_value"],
-            p_range=range(0, 2),
-            d_range=range(0, 2),
-            q_range=range(0, 2),
-        ),
-    },
     "xgboost_regressor": {
         "target_column": "target_log_return_1",
         "train_window": 24 * 45,

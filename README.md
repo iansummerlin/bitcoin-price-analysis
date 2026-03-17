@@ -36,7 +36,6 @@ graph TD
         XGBDir["XGBoost Direction<br/><i>Classification · default</i>"]
         LGBDir["LightGBM Direction<br/><i>Classification</i>"]
         XGBPrice["XGBoost Price<br/><i>Regression</i>"]
-        ARIMA["ARIMA<br/><i>Legacy baseline</i>"]
     end
 
     subgraph Eval["Evaluation & Gating"]
@@ -57,8 +56,8 @@ graph TD
     Binance --> Collect["collect.py<br/><i>Live streaming</i>"]
     Loaders --> Dataset --> Features --> Targets
 
-    Targets --> XGBDir & LGBDir & XGBPrice & ARIMA
-    XGBDir & LGBDir & XGBPrice & ARIMA --> WalkFwd
+    Targets --> XGBDir & LGBDir & XGBPrice
+    XGBDir & LGBDir & XGBPrice --> WalkFwd
     WalkFwd --> Baselines
     WalkFwd --> RegGate
     WalkFwd --> History
@@ -78,7 +77,7 @@ graph TD
 ├── evaluation/   # targets, baselines, walk-forward evaluation, ablation/comparison,
 │                 #   cost simulation (cost_model.py), signal rules (signal_rules.py)
 ├── features/     # deterministic feature engineering functions + canonical pipeline
-├── models/       # model interface, ARIMA baseline, XGBoost, LightGBM
+├── models/       # model interface, XGBoost, LightGBM
 ├── signals/      # downstream signal export and validation
 ├── scripts/      # thin CLI wrappers for comparison, ablation, export
 ├── tests/        # unit + integration coverage for the research workflow
@@ -226,14 +225,14 @@ Current generated artifacts live in `artifacts/` (plus `BACKTEST.md` at the repo
 
 Phase 13 also archives per-run reports under `artifacts/autoresearch_runs/`. `AUTORESEARCH.md` is the latest report only; the append-only run history lives in `artifacts/autoresearch_history.json`, with `AUTORESEARCH_HISTORY.md` generated as a human-readable index.
 
-Historical 2025 outputs such as old plots and the legacy ARIMA pickle were removed because they were stale clutter, not evidence.
+Historical 2025 outputs such as old plots were removed because they were stale clutter, not evidence.
 
 ## Limitations
 
 - The dataset was last refreshed on March 14, 2026 (price through March 13, sentiment through March 14).
 - Phase 12 expanded the feature set to 42 features across 5 data families (price/volume, sentiment, cross-asset, on-chain, microstructure). No individual new data family showed clear measurable improvement — expanded data increases recall but degrades precision. The best configuration (LightGBM, 4h, full features) clears 2 of 3 thresholds but precision (0.428) remains below 0.55.
 - Data is the confirmed bottleneck for precision. Phase 13 exhausted the hyperparameter/threshold search space across 172 experiments (3 runs) without closing the precision gap. No configuration — regardless of model family, hyperparameters, decision threshold, actionable threshold, cost buffer, or feature subset — produced held-out precision above 0.41. The 42 features are lagging indicators that are widely available and largely priced in. New data families with genuine leading signal (e.g. global liquidity cycle, exchange flows via paid providers) are the most promising path forward.
-- `scripts/compare_models.py` exists for reproducible family comparison, but ARIMA evaluation is still materially slower than the tree-based path and should be treated as research tooling, not a fast daily check.
+- `scripts/compare_models.py` exists for reproducible family comparison.
 
 ## Autonomous Experiment Loop — Limitations
 

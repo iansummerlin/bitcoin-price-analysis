@@ -76,7 +76,7 @@ data/         # loaders, validation, dataset assembly
 evaluation/   # targets, baselines, walk-forward, ablation, comparison,
               #   cost simulation (cost_model.py), signal rules (signal_rules.py)
 features/     # deterministic feature engineering pipeline
-models/       # model interface (base.py), ARIMA, XGBoost, LightGBM
+models/       # model interface (base.py), XGBoost, LightGBM
 signals/      # downstream signal export and validation
 scripts/      # CLI wrappers (compare, ablate, export)
 tests/        # unit + integration tests

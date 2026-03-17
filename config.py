@@ -34,8 +34,6 @@ BTC_SENTIMENTDATA_LIVE_URL = "https://api.alternative.me/fng/?limit=1&date_forma
 # ephemeral outputs rather than evidence of current model quality.
 BTC_CLOSING_PRICE_CHART_PATH = str(ROOT_DIR / "bitcoin-closing-price.png")
 BTC_ACTUAL_VS_PREDICTED_CHART_PATH = str(ROOT_DIR / "bitcoin-actual-vs-predicted-price.png")
-ARIMA_CLOSING_PRICE_MODEL = str(ROOT_DIR / "arima-btc-closing-price.pkl")
-
 # Canonical dataset columns.
 OHLCV_COLUMNS = ["open", "high", "low", "close", "Volume BTC", "Volume USD"]
 SENTIMENT_COLUMNS = ["fng_value"]

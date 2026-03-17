@@ -18,13 +18,11 @@ from config import (
 )
 from evaluation.baselines import add_baseline_predictions
 from evaluation.reporting import score_predictions
-from models.arima_model import ImprovedARIMAModel
 from models.lightgbm_model import LightGBMDirectionModel
 from models.xgboost_model import XGBoostDirectionModel, XGBoostPriceModel
 
 
 MODEL_REGISTRY = {
-    "arima_regressor": ImprovedARIMAModel,
     "xgboost_regressor": XGBoostPriceModel,
     "xgboost_direction": XGBoostDirectionModel,
     "lightgbm_direction": LightGBMDirectionModel,
@@ -66,8 +64,6 @@ def _build_model(model_name: str):
     model_cls = MODEL_REGISTRY[model_name]
     if not isinstance(model_cls, type):
         return model_cls()
-    if model_name == "arima_regressor":
-        return model_cls(p_range=range(0, 2), d_range=range(0, 2), q_range=range(0, 2))
     return model_cls(n_estimators=100, max_depth=3)
 
 

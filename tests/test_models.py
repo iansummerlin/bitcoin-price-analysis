@@ -8,7 +8,6 @@ import pandas as pd
 from config import CROSSASSET_COLUMNS, DEFAULT_DIRECTION_TARGET_COLUMN, DEFAULT_RETURN_TARGET_COLUMN, EXOG_COLUMNS, MICROSTRUCTURE_COLUMNS, ONCHAIN_COLUMNS
 from evaluation.targets import add_targets
 from features.pipeline import apply_feature_pipeline
-from models.arima_model import ImprovedARIMAModel
 from models.base import BaseModel
 from models.xgboost_model import XGBoostDirectionModel, XGBoostPriceModel
 
@@ -87,16 +86,6 @@ class TestXGBoostDirectionModel(unittest.TestCase):
         self.assertEqual(len(predictions), len(df))
         self.assertEqual(len(probabilities), len(df))
         self.assertTrue(set(np.unique(predictions)).issubset({0, 1}))
-
-
-class TestImprovedARIMAModel(unittest.TestCase):
-    def test_fit_and_predict(self):
-        df = _make_train_df()
-        model = ImprovedARIMAModel(p_range=range(0, 2), d_range=range(0, 2), q_range=range(0, 2))
-        metrics = model.fit(df, target_column=DEFAULT_RETURN_TARGET_COLUMN)
-        self.assertIn("aic", metrics)
-        predictions = model.predict(df.iloc[-20:])
-        self.assertEqual(len(predictions), 20)
 
 
 if __name__ == "__main__":

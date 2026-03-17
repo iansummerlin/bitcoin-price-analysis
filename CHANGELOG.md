@@ -16,6 +16,11 @@ Add entries for:
 Do not use this as a full engineering diary. Prefer short entries linked to the
 relevant docs and commits.
 
+## 2026-03-17
+
+### Removed
+- ARIMA model, stale artifacts, and `statsmodels`/`patsy` dependencies — unused legacy baseline
+
 ## 2026-03-16
 
 ### Added
@@ -53,7 +58,7 @@ relevant docs and commits.
 ### Changed
 - `EXOG_COLUMNS` expanded from 23 to 42 features
 - `build_dataset()` accepts `include_crossasset`, `include_onchain`, `include_microstructure` flags
-- Model comparison now includes LightGBM alongside XGBoost and ARIMA
+- Model comparison now includes LightGBM alongside XGBoost
 - Best known config updated: LightGBM, 4h horizon, ROC-AUC=0.603, recall=0.183, precision=0.428
 
 ### Added (Phase 13 infrastructure)
