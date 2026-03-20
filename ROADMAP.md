@@ -18,7 +18,7 @@ If you are a fresh agent with no other context:
 3. Read `README.md` to confirm it matches the roadmap.
 4. **Phases 0–13 are complete.** The infrastructure is solid — do not redo this work.
 5. **Phase 13 (autonomous experiment loop) concluded after 3 runs and 172 experiments.** All runs failed Gate 7. The search space is exhausted — hyperparameter/threshold tuning cannot close the precision gap with the current feature set. The bottleneck is data inputs.
-6. **Post-Phase-13 liquidity work is complete and documented.** The repo now consumes the sibling `global-liquidity-analysis` artifact, but the result was context-only: additive liquidity features were mixed, and an optional directional liquidity gate is modestly helpful in pooled classification metrics but operationally weak in trading terms.
+6. **Post-Phase-13 liquidity work is complete and documented.** The repo now consumes the sibling `global-liquidity-analysis` artifact, but the result was context-only: additive liquidity features were mixed, and an optional directional liquidity gate is modestly helpful in pooled classification metrics but operationally weak in trading terms. The strongest surviving use is regime detection.
 7. Read `program.md` for experiment loop operating model and `AUTORESEARCH.md` for the latest run results.
 
 **Default next task:** Expand the data universe with leading indicators beyond the now-tested liquidity artifact before running the experiment loop again. See "If Phase 12 is reopened" section and Phase 13 conclusion for context.
@@ -118,7 +118,7 @@ The most likely reason to reopen Phase 12 is that Phase 13 fails to close the pr
 |----------|------|-------------|-----------------|
 | **Glassnode** | $29/mo | MVRV, NVT, exchange net flows, whale metrics, realized price, SOPR — strongest on-chain analytics | If Phase 13 fails and on-chain proxy features (12C) showed any directional signal |
 | **CoinGlass** | $49/mo | Historical open interest back to 2019, liquidation data, long/short ratios, multi-exchange aggregation | If funding rate features (12E) showed any signal — OI/liquidation data is likely where the real microstructure value is |
-| **FRED API** | Free (key required) | CPI, Fed funds rate, yield curve, M2 money supply | If cross-asset features (12B) showed macro regime signal |
+| **FRED API** | Free (key required) | CPI, Fed funds rate, yield curve, M2 money supply | Partially explored already via the sibling `global-liquidity-analysis` repo, which built a FRED-backed liquidity composite and downstream regime artifact. That work was useful as regime/context infrastructure but did not change the core economic conclusion here. Treat generic FRED macro expansion as partially de-risked, not untouched. |
 | **CryptoQuant** | $29/mo | Exchange reserves, miner flows, whale alerts, fund flow ratio | If exchange flow granularity beyond Glassnode is needed |
 
 Any new data family added in a reopened Phase 12 must follow the same pattern: integrate, ablate in isolation, document the result in `BACKTEST.md`, then hand to Phase 13 for combinatorial search.
@@ -146,13 +146,14 @@ What the research found:
 - additive liquidity features were a mixed tradeoff at 1h
 - additive liquidity was effectively neutral at 4h
 - simpler liquidity representations were cleaner than the full additive family
-- liquidity regime was more useful as context than as direct additive input
+- liquidity regime was more useful as context and regime detection than as direct additive input
 - a directional liquidity gate (`EXPANDING` + `CONTRACTING`, suppress `NEUTRAL`) modestly improved pooled classification metrics
 - the same gate remained operationally weak in trading-aligned terms because the base signal is still deeply negative after costs
 
 Conclusion:
 
 - liquidity is worth keeping as optional research infrastructure
+- liquidity is most defensible as regime/context infrastructure
 - liquidity is not the fix for the repo’s core economics
 - the binding problem remains absolute signal quality after costs
 

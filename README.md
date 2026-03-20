@@ -14,7 +14,7 @@ Post-Phase-13 liquidity work is now integrated:
 
 - the repo can consume the `global-liquidity-analysis` artifact as an optional feature family
 - additive liquidity features were a mixed tradeoff, not a promotion candidate
-- liquidity works better as macro context than as a direct additive signal
+- liquidity works better as macro regime/context detection than as a direct additive signal
 - an optional directional liquidity gate exists via `make backtest-gated`, but it remains research-only and default-off
 
 Run `make backtest` to regenerate `BACKTEST.md`, `make backtest-gated` for the optional liquidity-gated comparison path, and `make experiment` to regenerate `AUTORESEARCH.md`.
@@ -210,7 +210,7 @@ Current judgment on liquidity:
 
 - additive use: mixed tradeoff
 - 4h additive use: effectively neutral
-- best use so far: optional regime/context filter, not default model input promotion
+- best use so far: optional regime/context filter, especially regime detection, not default model input promotion
 
 ## Evaluation Contract
 
@@ -267,7 +267,7 @@ Historical 2025 outputs such as old plots were removed because they were stale c
 - The dataset was last refreshed on March 14, 2026 (price through March 13, sentiment through March 14).
 - Phase 12 expanded the feature set to 42 features across 5 data families (price/volume, sentiment, cross-asset, on-chain, microstructure). No individual new data family showed clear measurable improvement — expanded data increases recall but degrades precision. The best configuration (LightGBM, 4h, full features) clears 2 of 3 thresholds but precision (0.428) remains below 0.55.
 - Data is the confirmed bottleneck for precision. Phase 13 exhausted the hyperparameter/threshold search space across 172 experiments (3 runs) without closing the precision gap. No configuration — regardless of model family, hyperparameters, decision threshold, actionable threshold, cost buffer, or feature subset — produced held-out precision above 0.41. The 42 features are lagging indicators that are widely available and largely priced in. New data families with genuine leading signal (e.g. global liquidity cycle, exchange flows via paid providers) are the most promising path forward.
-- Liquidity integration did not change the repo’s overall judgment. Additive liquidity features were mixed, and the optional directional liquidity gate improved pooled classification metrics modestly but remained operationally weak in trading-aligned terms.
+- Liquidity integration did not change the repo’s overall judgment. Additive liquidity features were mixed, and the optional directional liquidity gate improved pooled classification metrics modestly but remained operationally weak in trading-aligned terms. The strongest durable use case is regime detection and research segmentation.
 - `scripts/compare_models.py` exists for reproducible family comparison.
 
 ## Autonomous Experiment Loop — Limitations

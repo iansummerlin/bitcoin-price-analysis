@@ -10,7 +10,7 @@ Post-Phase-13 liquidity integration is also complete:
 
 - the repo can consume `global-liquidity-analysis` as an optional feature family
 - additive liquidity features were mixed
-- liquidity works better as optional context/gating than as a promoted additive feature family
+- liquidity works better as optional regime/context detection and gating than as a promoted additive feature family
 - the optional directional gate is research-only and default-off
 
 ---
