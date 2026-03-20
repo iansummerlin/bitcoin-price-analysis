@@ -18,6 +18,7 @@ from config import (
     DATA_TIMEFRAME,
     EXOG_COLUMNS,
     FEATURE_SCHEMA_VERSION,
+    LIQUIDITY_COLUMNS,
     MICROSTRUCTURE_COLUMNS,
     MODELING_MARKET_SOURCE,
     ONCHAIN_COLUMNS,
@@ -52,6 +53,7 @@ def build_dataset(
     include_crossasset: bool = True,
     include_onchain: bool = True,
     include_microstructure: bool = True,
+    include_liquidity: bool = True,
 ) -> tuple[pd.DataFrame, DatasetMetadata]:
     """Build the canonical historical research dataset.
 
@@ -65,6 +67,8 @@ def build_dataset(
         If True, load on-chain data and compute features.
     include_microstructure : bool
         If True, load funding rate data and compute features.
+    include_liquidity : bool
+        If True, load global liquidity artifact and merge features.
     """
     price = load_price_history(price_path)
     sentiment = load_sentiment_history(sentiment_path)
@@ -141,6 +145,30 @@ def build_dataset(
                 dataset[col] = 0.0
     else:
         for col in MICROSTRUCTURE_COLUMNS:
+            if col not in dataset.columns:
+                dataset[col] = 0.0
+
+    # Liquidity features (global-liquidity-analysis integration)
+    if include_liquidity:
+        try:
+            from data.liquidity import load_liquidity_artifact, merge_liquidity_features
+
+            liq_df, liq_meta = load_liquidity_artifact()
+            if not liq_df.empty:
+                dataset = merge_liquidity_features(dataset, liq_df)
+                logger.info("Liquidity features added (%d columns)", len(LIQUIDITY_COLUMNS))
+                if liq_meta.get("is_stale"):
+                    logger.warning("Liquidity artifact is stale — features may be outdated")
+            else:
+                logger.warning("Liquidity data empty — features will be NaN")
+                for col in LIQUIDITY_COLUMNS:
+                    dataset[col] = float("nan")
+        except Exception as e:
+            logger.warning("Failed to load liquidity data: %s — continuing without", e)
+            for col in LIQUIDITY_COLUMNS:
+                dataset[col] = float("nan")
+    else:
+        for col in LIQUIDITY_COLUMNS:
             if col not in dataset.columns:
                 dataset[col] = 0.0
 

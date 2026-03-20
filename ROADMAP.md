@@ -5,7 +5,7 @@
 - **Purpose:** Turn this repository into a reliable Bitcoin signal-generation and model-research repo for a separate trading/execution repository.
 - **Audience:** A fresh engineering agent with zero prior context.
 - **Primary constraint:** Prove whether the repo can produce a usable predictive signal. It must not become an execution bot.
-- **Last updated:** March 16, 2026 (Phase 13 concluded). Data refreshed through March 13, 2026.
+- **Last updated:** March 20, 2026 (Phase 13 concluded; post-Phase-13 liquidity integration and gating research incorporated). Data refreshed through March 13, 2026.
 
 ---
 
@@ -18,9 +18,10 @@ If you are a fresh agent with no other context:
 3. Read `README.md` to confirm it matches the roadmap.
 4. **Phases 0–13 are complete.** The infrastructure is solid — do not redo this work.
 5. **Phase 13 (autonomous experiment loop) concluded after 3 runs and 172 experiments.** All runs failed Gate 7. The search space is exhausted — hyperparameter/threshold tuning cannot close the precision gap with the current feature set. The bottleneck is data inputs.
-6. Read `program.md` for experiment loop operating model and `AUTORESEARCH.md` for the latest run results.
+6. **Post-Phase-13 liquidity work is complete and documented.** The repo now consumes the sibling `global-liquidity-analysis` artifact, but the result was context-only: additive liquidity features were mixed, and an optional directional liquidity gate is modestly helpful in pooled classification metrics but operationally weak in trading terms.
+7. Read `program.md` for experiment loop operating model and `AUTORESEARCH.md` for the latest run results.
 
-**Default next task:** Expand the data universe with leading indicators (e.g. global liquidity cycle, exchange flow data from paid providers) before running the experiment loop again. See "If Phase 12 is reopened" section and Phase 13 conclusion for context.
+**Default next task:** Expand the data universe with leading indicators beyond the now-tested liquidity artifact before running the experiment loop again. See "If Phase 12 is reopened" section and Phase 13 conclusion for context.
 
 ---
 
@@ -125,6 +126,35 @@ Any new data family added in a reopened Phase 12 must follow the same pattern: i
 **Best known configuration entering Phase 13:** LightGBM with full expanded features on 4h horizon — ROC-AUC=0.603, recall=0.183, precision=0.428. Clears 2 of 3 thresholds. Precision gap (0.428 vs 0.55) is the remaining bottleneck.
 
 **Key insight:** The infrastructure is not the problem — the inputs are. The model detects moves but can't reliably filter noise from signal with current features. All 42 features are lagging indicators that are widely available and largely priced in.
+
+---
+
+## Post-Phase-13 Liquidity Research (complete)
+
+After Phase 13 concluded, the repo integrated the sibling [`global-liquidity-analysis`](/home/ixn/Documents/code/crypto/global-liquidity-analysis) artifact as an optional feature family.
+
+What was added:
+
+- `data/liquidity.py` artifact loader
+- optional `include_liquidity` dataset flag
+- `LIQUIDITY_COLUMNS` in `config.py`
+- research scripts for ablation, representation tests, gating tests, and trading-aligned comparison
+- optional `make backtest-gated` path
+
+What the research found:
+
+- additive liquidity features were a mixed tradeoff at 1h
+- additive liquidity was effectively neutral at 4h
+- simpler liquidity representations were cleaner than the full additive family
+- liquidity regime was more useful as context than as direct additive input
+- a directional liquidity gate (`EXPANDING` + `CONTRACTING`, suppress `NEUTRAL`) modestly improved pooled classification metrics
+- the same gate remained operationally weak in trading-aligned terms because the base signal is still deeply negative after costs
+
+Conclusion:
+
+- liquidity is worth keeping as optional research infrastructure
+- liquidity is not the fix for the repo’s core economics
+- the binding problem remains absolute signal quality after costs
 
 ---
 
@@ -235,6 +265,14 @@ The experiment loop infrastructure is solid and should be reused once the data u
 
 **Precision is the bottleneck, and it's a data problem.** The model achieves decent ROC-AUC (0.70+) on held-out data, meaning it has discriminative ability. But it cannot convert that into precise actionable signals above the 0.55 bar. Phase 13 proved this empirically: 172 experiments across 3 runs — covering hyperparameter grids, decision thresholds, actionable thresholds, cost buffers, feature ablation, and both model families — failed to close the gap. The core problem is confirmed: the 42-feature set consists of lagging, widely-available indicators that are largely priced in.
 
+What has already been tested since Phase 13:
+
+- global liquidity as an additive feature family
+- global liquidity as a simpler regime-only representation
+- global liquidity as an optional directional regime gate
+
+These did not change the final economic judgment. The gate made the model slightly less bad, not good.
+
 One path forward:
 
-1. **Better data** — the remaining option is data sources with genuine leading signal that the market hasn't fully absorbed. Top candidates: global liquidity cycle (central bank balance sheets, free via FRED/ECB/BOJ APIs), exchange flows/MVRV/SOPR (Glassnode $29/mo), historical open interest/liquidations (CoinGlass $49/mo). See "If Phase 12 is reopened" section for the full list. Once new data families are integrated and ablated, the Phase 13 experiment loop should be re-run on the expanded feature set.
+1. **Better data** — the remaining option is data sources with genuine leading signal that the market hasn't fully absorbed beyond the now-tested liquidity artifact. Top candidates: exchange flows/MVRV/SOPR (Glassnode $29/mo), historical open interest/liquidations (CoinGlass $49/mo), or other non-price leading indicators. See "If Phase 12 is reopened" section for the full list. Once new data families are integrated and ablated, the Phase 13 experiment loop should be re-run on the expanded feature set.

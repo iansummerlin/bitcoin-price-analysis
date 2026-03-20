@@ -1,0 +1,70 @@
+{
+  "ungated": {
+    "label": "ungated",
+    "allowed_regimes": [
+      "CONTRACTING",
+      "EXPANDING",
+      "NEUTRAL",
+      "UNKNOWN"
+    ],
+    "coverage": 1.0,
+    "gated_rows": 4320,
+    "total_rows": 4320,
+    "signal_count": 1475,
+    "directional_accuracy": 0.6638888888888889,
+    "precision": 0.23864406779661018,
+    "recall": 0.5168869309838473,
+    "f1": 0.32653061224489793,
+    "positive_rate": 0.3414351851851852,
+    "roc_auc": 0.6376299906503174
+  },
+  "directional": {
+    "label": "directional",
+    "allowed_regimes": [
+      "CONTRACTING",
+      "EXPANDING"
+    ],
+    "coverage": 0.7166666666666667,
+    "gated_rows": 3096,
+    "total_rows": 4320,
+    "signal_count": 1172,
+    "directional_accuracy": 0.6346899224806202,
+    "precision": 0.25,
+    "recall": 0.5376146788990825,
+    "f1": 0.34129295282469424,
+    "positive_rate": 0.3785529715762274,
+    "roc_auc": 0.6253629625367279
+  },
+  "expanding_only": {
+    "label": "expanding_only",
+    "allowed_regimes": [
+      "EXPANDING"
+    ],
+    "coverage": 0.3277777777777778,
+    "gated_rows": 1416,
+    "total_rows": 4320,
+    "signal_count": 532,
+    "directional_accuracy": 0.643361581920904,
+    "precision": 0.25,
+    "recall": 0.5564853556485355,
+    "f1": 0.3450064850843061,
+    "positive_rate": 0.3757062146892655,
+    "roc_auc": 0.6516176507182647
+  },
+  "contracting_only": {
+    "label": "contracting_only",
+    "allowed_regimes": [
+      "CONTRACTING"
+    ],
+    "coverage": 0.3888888888888889,
+    "gated_rows": 1680,
+    "total_rows": 4320,
+    "signal_count": 640,
+    "directional_accuracy": 0.6273809523809524,
+    "precision": 0.25,
+    "recall": 0.5228758169934641,
+    "f1": 0.3382663847780127,
+    "positive_rate": 0.38095238095238093,
+    "roc_auc": 0.6113870099228434
+  }
+}

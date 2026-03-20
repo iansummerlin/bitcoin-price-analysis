@@ -16,6 +16,18 @@ Add entries for:
 Do not use this as a full engineering diary. Prefer short entries linked to the
 relevant docs and commits.
 
+## 2026-03-20
+
+### Added
+- Global liquidity integration: `data/liquidity.py` loader, `evaluation/liquidity_gate.py` directional regime filter
+- Liquidity experiment scripts: ablation, gating, backtest comparisons
+- `include_liquidity` flag in `build_dataset()` and `config.py` liquidity constants
+- `make backtest-gated` target for liquidity regime gate comparison
+
+### Changed
+- Architecture diagram updated with liquidity data source and gate components
+- ROADMAP.md and CLAUDE.md updated with post-Phase-13 liquidity conclusions
+
 ## 2026-03-17
 
 ### Removed

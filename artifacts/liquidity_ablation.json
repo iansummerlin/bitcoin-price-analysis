@@ -1,0 +1,40 @@
+{
+  "with_liquidity": {
+    "label": "with_liquidity",
+    "include_liquidity": true,
+    "scores": {
+      "directional_accuracy": 0.6638888888888889,
+      "precision": 0.20165054295783158,
+      "recall": 0.44642428214154223,
+      "f1": 0.264246218540153,
+      "positive_rate": 0.3414351851851852,
+      "roc_auc": 0.6345988259388813,
+      "fit_accuracy": 0.8856481481481482,
+      "fit_positive_rate": 0.12357253086419755
+    },
+    "windows_evaluated": 6,
+    "dataset_rows": 8760
+  },
+  "without_liquidity": {
+    "label": "without_liquidity",
+    "include_liquidity": false,
+    "scores": {
+      "directional_accuracy": 0.6828703703703703,
+      "precision": 0.20912263431409994,
+      "recall": 0.3995562180222841,
+      "f1": 0.2519341516871742,
+      "positive_rate": 0.3034722222222222,
+      "roc_auc": 0.6304159380833761,
+      "fit_accuracy": 0.8854166666666666,
+      "fit_positive_rate": 0.12357253086419755
+    },
+    "windows_evaluated": 6,
+    "dataset_rows": 8760
+  },
+  "verdict": "TRADEOFF (mixed)",
+  "deltas": {
+    "precision": -0.007472091356268362,
+    "recall": 0.046868064119258146,
+    "roc_auc": 0.004182887855505135
+  }
+}

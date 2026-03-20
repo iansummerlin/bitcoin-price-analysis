@@ -1,4 +1,4 @@
-.PHONY: test train collect backtest regression-gate compare ablate export-signal setup experiment
+.PHONY: test train collect backtest backtest-gated regression-gate compare ablate export-signal setup experiment
 
 # Run all tests
 test:
@@ -19,6 +19,10 @@ collect:
 # Run backtests
 backtest:
 	.venv/bin/python backtest.py
+
+# Run backtests with liquidity regime gate comparison (optional research path)
+backtest-gated:
+	.venv/bin/python scripts/backtest_gated_comparison.py
 
 regression-gate:
 	.venv/bin/python -m evaluation.regression_gate

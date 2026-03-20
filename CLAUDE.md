@@ -4,7 +4,14 @@
 
 A Bitcoin signal-generation and model-research repo. It does **not** place trades. It exists to answer whether a predictive signal survives realistic costs. The canonical plan and progress live in `ROADMAP.md`.
 
-**Current status:** research-only. Phase 12 complete (data universe expanded, no new family individually validated as a signal source). Phase 13 complete (autonomous experiment loop — 3 runs, 172 experiments, search space exhausted). All runs failed Gate 7. Best held-out: precision=0.407 (need 0.55), recall=0.059 (need 0.15), ROC-AUC=0.703 (pass). Conclusion: hyperparameter/threshold tuning cannot close the precision gap with the current 42-feature set. The bottleneck is data inputs, not model configuration. Data last refreshed March 14, 2026.
+**Current status:** research-only. Phase 12 complete (data universe expanded, no new family individually validated as a signal source). Phase 13 complete (autonomous experiment loop — 3 runs, 172 experiments, search space exhausted). All runs failed Gate 7. Best held-out: precision=0.407 (need 0.55), recall=0.059 (need 0.15), ROC-AUC=0.703 (pass). Conclusion: hyperparameter/threshold tuning cannot close the precision gap with the original 42-feature set. The bottleneck is data inputs, not model configuration. Data last refreshed March 14, 2026.
+
+Post-Phase-13 liquidity integration is also complete:
+
+- the repo can consume `global-liquidity-analysis` as an optional feature family
+- additive liquidity features were mixed
+- liquidity works better as optional context/gating than as a promoted additive feature family
+- the optional directional gate is research-only and default-off
 
 ---
 
@@ -14,6 +21,7 @@ A Bitcoin signal-generation and model-research repo. It does **not** place trade
 make test              # run full test suite (pytest)
 make train             # train default model (gen.py)
 make backtest          # walk-forward evaluation (backtest.py) — auto-saves history + BACKTEST.md
+make backtest-gated    # optional liquidity regime gate comparison path
 make regression-gate   # compare latest backtest against previous (exit 1 on regression)
 make compare           # model family comparison
 make ablate            # feature ablation
@@ -96,6 +104,7 @@ config.py     # all shared constants, feature lists, thresholds
 - **Targets are trading-aligned** — the default target is cost-adjusted direction, not raw price. See `evaluation/targets.py`.
 - **All external data sources must use the shared cache** — any loader that fetches from a remote API must go through `data/cache.py` with a defined TTL. No loader may bypass the cache or retry repeatedly on failure. On API failure, prefer stale cache over retries. Repeated `build_dataset()` calls within TTL must not hit the remote API.
 - **External data families are toggleable** — `build_dataset()` accepts `include_crossasset`, `include_onchain`, `include_microstructure` flags. When disabled, feature columns are filled with 0 (neutral) to maintain schema compatibility.
+- **Liquidity is optional research infrastructure** — `build_dataset()` also accepts `include_liquidity`. The liquidity artifact comes from the sibling `global-liquidity-analysis` repo. Keep it default-off in promoted research conclusions unless evidence clearly justifies otherwise.
 
 ---
 
@@ -118,3 +127,4 @@ These must hold across multiple walk-forward windows, not just one split.
 - Do not weaken or remove tests to make the suite pass — fix the code.
 - Do not retrain on fresh data without re-running the full evaluation pipeline.
 - Do not commit generated artifacts (model files, predictions) without updated metadata.
+- Do not treat the optional liquidity gate as a promoted strategy path unless trading-aligned evidence justifies it.

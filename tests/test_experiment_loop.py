@@ -29,6 +29,7 @@ from config import (
     DEFAULT_TARGET_COLUMN,
     EXOG_COLUMNS,
     EXPERIMENT_MIN_IMPROVEMENT,
+    LIQUIDITY_COLUMNS,
     MICROSTRUCTURE_COLUMNS,
     ONCHAIN_COLUMNS,
 )
@@ -74,7 +75,7 @@ def _make_experiment_df(n: int = 800, seed: int = 42) -> pd.DataFrame:
     )
     featured = apply_features(df)
     rng2 = np.random.RandomState(seed + 1)
-    for col in CROSSASSET_COLUMNS + ONCHAIN_COLUMNS + MICROSTRUCTURE_COLUMNS:
+    for col in CROSSASSET_COLUMNS + ONCHAIN_COLUMNS + MICROSTRUCTURE_COLUMNS + LIQUIDITY_COLUMNS:
         featured[col] = rng2.randn(len(featured))
     return add_targets(featured)
 

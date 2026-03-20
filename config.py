@@ -95,6 +95,12 @@ EXOG_COLUMNS = [
     "funding_rate_8h",
     "funding_rate_zscore_7d",
     "funding_rate_cumulative_24h",
+    # Liquidity features (global-liquidity-analysis).
+    "liquidity_global_usd_t",
+    "liquidity_m2_roc_3m",
+    "liquidity_regime_expanding",
+    "liquidity_regime_neutral",
+    "liquidity_regime_contracting",
 ]
 
 # Cross-asset feature columns (Phase 12B) — also listed separately for
@@ -161,6 +167,15 @@ MICROSTRUCTURE_COLUMNS = [
     "funding_rate_8h",
     "funding_rate_zscore_7d",
     "funding_rate_cumulative_24h",
+]
+
+# Liquidity feature columns (global-liquidity-analysis integration).
+LIQUIDITY_COLUMNS = [
+    "liquidity_global_usd_t",
+    "liquidity_m2_roc_3m",
+    "liquidity_regime_expanding",
+    "liquidity_regime_neutral",
+    "liquidity_regime_contracting",
 ]
 
 # Cache TTLs (seconds) for external data sources.

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-15T13:38:20.352827+00:00",
+  "generated_at": "2026-03-20T21:08:55.033932+00:00",
   "timeframe": "1h",
   "timezone": "UTC",
   "market_source": "gemini_btcusd_spot_1h",
@@ -51,7 +51,12 @@
     "hashrate_price_divergence",
     "funding_rate_8h",
     "funding_rate_zscore_7d",
-    "funding_rate_cumulative_24h"
+    "funding_rate_cumulative_24h",
+    "liquidity_global_usd_t",
+    "liquidity_m2_roc_3m",
+    "liquidity_regime_expanding",
+    "liquidity_regime_neutral",
+    "liquidity_regime_contracting"
   ],
   "price_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/BTCUSD_1H.csv",
   "sentiment_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/BTC_sentiment.csv"

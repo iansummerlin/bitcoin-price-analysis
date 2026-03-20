@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-03-20T21:14:04.471296+00:00",
+  "model_name": "xgboost_direction",
+  "target_column": "target_direction_cost_adj",
+  "round_trip_cost_bps": 30.0,
+  "evaluation_rows": 4314,
+  "coverage": 0.7165044042651831,
+  "ungated": {
+    "label": "ungated",
+    "trade_count": 1473.0,
+    "win_rate": 0.2695179904955872,
+    "avg_return_per_trade_bps": -30.77552027937692,
+    "cumulative_return_pct": -98.9652415609425,
+    "max_drawdown_pct": 98.96384268870611,
+    "profit_factor": 0.2616037421655244,
+    "sharpe_ratio": -44.71239192273506,
+    "total_cost_drag_pct": 441.90000000000003,
+    "total_rows": 4314.0,
+    "signal_rate": 0.34144645340751045
+  },
+  "gated": {
+    "label": "gated_directional",
+    "trade_count": 1171.0,
+    "win_rate": 0.2783945345858241,
+    "avg_return_per_trade_bps": -31.523341243620386,
+    "cumulative_return_pct": -97.58609676118867,
+    "max_drawdown_pct": 97.58283344668484,
+    "profit_factor": 0.27198782388717346,
+    "sharpe_ratio": -43.82461966515077,
+    "total_cost_drag_pct": 351.3,
+    "total_rows": 4314.0,
+    "signal_rate": 0.2714418173388966
+  },
+  "deltas": {
+    "cumulative_return_pct": 1.3791447997538313,
+    "win_rate": 0.00887654409023686,
+    "avg_return_per_trade_bps": -0.7478209642434663,
+    "max_drawdown_pct": -1.381009242021264,
+    "sharpe_ratio": 0.8877722575842881,
+    "profit_factor": 0.010384081721649063
+  },
+  "verdict": "CLASSIFICATION-ONLY HELPFUL"
+}

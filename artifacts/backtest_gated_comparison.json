@@ -1,0 +1,59 @@
+{
+  "generated_at": "2026-03-20T21:09:33.765903+00:00",
+  "model_name": "xgboost_direction",
+  "target_column": "target_direction_cost_adj",
+  "evaluation_rows": 8760,
+  "windows_evaluated": 6,
+  "gate_type": "directional",
+  "allowed_regimes": [
+    "CONTRACTING",
+    "EXPANDING"
+  ],
+  "ungated": {
+    "window_mean": {
+      "directional_accuracy": 0.6638888888888889,
+      "precision": 0.20165054295783158,
+      "recall": 0.44642428214154223,
+      "f1": 0.264246218540153,
+      "positive_rate": 0.3414351851851852,
+      "roc_auc": 0.6345988259388813
+    },
+    "pooled": {
+      "directional_accuracy": 0.6638888888888889,
+      "precision": 0.23864406779661018,
+      "recall": 0.5168869309838473,
+      "f1": 0.32653061224489793,
+      "positive_rate": 0.3414351851851852,
+      "roc_auc": 0.6376299906503174,
+      "signal_count": 1475.0
+    }
+  },
+  "gated": {
+    "window_mean": {
+      "directional_accuracy": 0.6713541666666667,
+      "precision": 0.17322341856930365,
+      "recall": 0.3991851063460284,
+      "f1": 0.23115309186737756,
+      "positive_rate": 0.31820436507936506,
+      "roc_auc": 0.620288793443298,
+      "coverage": 0.7166666666666667,
+      "gated_rows": 516.0
+    },
+    "pooled": {
+      "directional_accuracy": 0.6346899224806202,
+      "precision": 0.25,
+      "recall": 0.5376146788990825,
+      "f1": 0.34129295282469424,
+      "positive_rate": 0.3785529715762274,
+      "roc_auc": 0.6253629625367279,
+      "coverage": 0.7166666666666667,
+      "signal_count": 1172.0
+    },
+    "coverage": 0.7166666666666667
+  },
+  "deltas_pooled": {
+    "precision": 0.011355932203389818,
+    "recall": 0.02072774791523524,
+    "f1": 0.014762340579796307
+  }
+}

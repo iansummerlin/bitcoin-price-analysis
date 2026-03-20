@@ -8,7 +8,16 @@ The canonical execution plan and progress tracker live in [ROADMAP.md](/home/ixn
 
 ## Current Judgment
 
-As of March 16, 2026, this repo is `research-only`, not a justified trading-strategy dependency. Phase 12 (data universe expansion) is complete. Phase 13 (autonomous experiment loop) is complete — 3 runs, 172 experiments, search space exhausted, all runs failed Gate 7. Best held-out results: precision=0.407 (need 0.55), recall=0.059 (need 0.15), ROC-AUC=0.703 (pass). Conclusion: the current 42-feature set (lagging indicators from price technicals, sentiment, cross-asset, on-chain, and microstructure) cannot produce a signal that clears the precision bar regardless of model or threshold tuning. The bottleneck is data inputs, not model configuration. Run `make backtest` to generate `BACKTEST.md` and `make experiment` to regenerate `AUTORESEARCH.md`.
+As of March 20, 2026, this repo is `research-only`, not a justified trading-strategy dependency. Phase 12 (data universe expansion) is complete. Phase 13 (autonomous experiment loop) is complete — 3 runs, 172 experiments, search space exhausted, all runs failed Gate 7. Best held-out results: precision=0.407 (need 0.55), recall=0.059 (need 0.15), ROC-AUC=0.703 (pass). Conclusion: the original 42-feature set (lagging indicators from price technicals, sentiment, cross-asset, on-chain, and microstructure) cannot produce a signal that clears the precision bar regardless of model or threshold tuning. The bottleneck is data inputs, not model configuration.
+
+Post-Phase-13 liquidity work is now integrated:
+
+- the repo can consume the `global-liquidity-analysis` artifact as an optional feature family
+- additive liquidity features were a mixed tradeoff, not a promotion candidate
+- liquidity works better as macro context than as a direct additive signal
+- an optional directional liquidity gate exists via `make backtest-gated`, but it remains research-only and default-off
+
+Run `make backtest` to regenerate `BACKTEST.md`, `make backtest-gated` for the optional liquidity-gated comparison path, and `make experiment` to regenerate `AUTORESEARCH.md`.
 
 ## Architecture
 
@@ -21,14 +30,16 @@ graph TD
         CrossAsset["Cross-Asset<br/><i>DXY · S&P · VIX · Gold · ETH</i>"]
         OnChain["On-Chain<br/><i>Hash rate · difficulty · tx metrics</i>"]
         Micro["Microstructure<br/><i>Binance funding rate</i>"]
+        Liquidity["Global Liquidity<br/><i>Optional · M2 · regime · ROC</i>"]
         Binance["Binance WebSocket<br/><i>Live BTCUSDT 1h</i>"]
     end
 
     subgraph Pipeline["Data & Feature Pipeline"]
         Cache["data/cache.py<br/><i>TTL-based file cache</i>"]
         Loaders["data/loaders.py<br/><i>Load & validate raw data</i>"]
+        LiqLoader["data/liquidity.py<br/><i>Load liquidity artifacts</i>"]
         Dataset["data/pipeline.py<br/><i>build_dataset()</i>"]
-        Features["features/pipeline.py<br/><i>42 deterministic features</i>"]
+        Features["features/pipeline.py<br/><i>42 core features + optional liquidity family</i>"]
         Targets["evaluation/targets.py<br/><i>Multi-horizon cost-adjusted labels</i>"]
     end
 
@@ -42,6 +53,7 @@ graph TD
         WalkFwd["Walk-Forward<br/><i>Train-on-past · predict-on-future</i>"]
         Baselines["Baselines<br/><i>Persistence · momentum · mean reversion</i>"]
         RegGate["Regression Gate<br/><i>5% tolerance on key metrics</i>"]
+        LiqGate["Liquidity Gate<br/><i>Optional directional regime filter</i>"]
         History["Backtest History<br/><i>Append-only · max 10 entries</i>"]
     end
 
@@ -53,6 +65,7 @@ graph TD
 
     Gemini & Sentiment --> Loaders
     CrossAsset & OnChain & Micro --> Cache --> Dataset
+    Liquidity --> LiqLoader --> Dataset
     Binance --> Collect["collect.py<br/><i>Live streaming</i>"]
     Loaders --> Dataset --> Features --> Targets
 
@@ -60,10 +73,12 @@ graph TD
     XGBDir & LGBDir & XGBPrice --> WalkFwd
     WalkFwd --> Baselines
     WalkFwd --> RegGate
+    WalkFwd --> LiqGate
     WalkFwd --> History
 
     History --> BacktestMD
     RegGate --> Artifacts
+    LiqGate --> Artifacts
     XGBDir --> Signal
     History --> Artifacts
 ```
@@ -96,6 +111,7 @@ graph TD
 - Cross-asset: `yfinance` (DXY, S&P 500, VIX, Gold, ETH-USD)
 - On-chain: `blockchain.com` (hash rate, difficulty, tx count/volume)
 - Microstructure: `Binance Futures` (funding rate history)
+- Liquidity: sibling `global-liquidity-analysis` artifact (`artifacts/liquidity_regime.json`)
 - Canonical timezone: `UTC`
 
 Training and evaluation use one canonical dataset builder in [data/pipeline.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/data/pipeline.py). Live analytics bootstrap from that same historical feature state before appending new candles in [collect.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/collect.py).
@@ -112,6 +128,7 @@ python3 -m venv .venv
 ```bash
 make train             # train the default model
 make backtest          # walk-forward evaluation + history + regression gate
+make backtest-gated    # optional liquidity regime gate comparison path
 make test              # run full test suite
 make regression-gate   # compare latest backtest against previous run
 make compare           # model family comparison
@@ -177,6 +194,24 @@ Trading-aligned targets live in [evaluation/targets.py](/home/ixn/Documents/code
 
 The default training target is the cost-adjusted directional label, not raw next-close prediction.
 
+### Optional liquidity family
+
+This repo can also load the artifact produced by [`global-liquidity-analysis`](/home/ixn/Documents/code/crypto/global-liquidity-analysis) through [data/liquidity.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/data/liquidity.py).
+
+The current liquidity columns are:
+
+- `liquidity_global_usd_t`
+- `liquidity_m2_roc_3m`
+- `liquidity_regime_expanding`
+- `liquidity_regime_neutral`
+- `liquidity_regime_contracting`
+
+Current judgment on liquidity:
+
+- additive use: mixed tradeoff
+- 4h additive use: effectively neutral
+- best use so far: optional regime/context filter, not default model input promotion
+
 ## Evaluation Contract
 
 [evaluation/walk_forward.py](/home/ixn/Documents/code/crypto/bitcoin-price-analysis/evaluation/walk_forward.py) is the canonical scoring harness. It provides:
@@ -232,6 +267,7 @@ Historical 2025 outputs such as old plots were removed because they were stale c
 - The dataset was last refreshed on March 14, 2026 (price through March 13, sentiment through March 14).
 - Phase 12 expanded the feature set to 42 features across 5 data families (price/volume, sentiment, cross-asset, on-chain, microstructure). No individual new data family showed clear measurable improvement — expanded data increases recall but degrades precision. The best configuration (LightGBM, 4h, full features) clears 2 of 3 thresholds but precision (0.428) remains below 0.55.
 - Data is the confirmed bottleneck for precision. Phase 13 exhausted the hyperparameter/threshold search space across 172 experiments (3 runs) without closing the precision gap. No configuration — regardless of model family, hyperparameters, decision threshold, actionable threshold, cost buffer, or feature subset — produced held-out precision above 0.41. The 42 features are lagging indicators that are widely available and largely priced in. New data families with genuine leading signal (e.g. global liquidity cycle, exchange flows via paid providers) are the most promising path forward.
+- Liquidity integration did not change the repo’s overall judgment. Additive liquidity features were mixed, and the optional directional liquidity gate improved pooled classification metrics modestly but remained operationally weak in trading-aligned terms.
 - `scripts/compare_models.py` exists for reproducible family comparison.
 
 ## Autonomous Experiment Loop — Limitations
@@ -252,4 +288,4 @@ This repo uses an autonomous AI experiment loop inspired by [Karpathy's autorese
 
 ## Decision
 
-This repo is a useful research and signal-export foundation, but not yet a genuinely useful production signal provider. Phase 12 (March 2026) expanded the data universe and identified 4h as the best prediction horizon. Phase 13 (March 2026) ran 172 experiments across 3 autonomous runs — broad hyperparameter search, precision-focused threshold tuning, and operating-point optimization — all failed Gate 7 on held-out data. The search space is exhausted: the current feature set cannot produce a signal that clears the precision bar. The repo remains research-only. The next high-value work is expanding the data universe with leading indicators (e.g. global liquidity cycle, exchange flow data) before running the experiment loop again.
+This repo is a useful research and signal-export foundation, but not yet a genuinely useful production signal provider. Phase 12 (March 2026) expanded the data universe and identified 4h as the best prediction horizon. Phase 13 (March 2026) ran 172 experiments across 3 autonomous runs — broad hyperparameter search, precision-focused threshold tuning, and operating-point optimization — all failed Gate 7 on held-out data. Subsequent liquidity integration was useful as macro context but did not change the economic conclusion. The search space is exhausted for the current input set: the repo remains research-only. The next high-value work is expanding the data universe with genuinely leading inputs before running the experiment loop again.

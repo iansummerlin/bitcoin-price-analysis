@@ -48,6 +48,6 @@
       "roc_auc": 0.4998973282475537
     }
   },
-  "prediction_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/artifacts/xgboost_direction_predictions.csv",
-  "generated_at": "2026-03-20T21:09:14.432447+00:00"
+  "prediction_path": "/home/ixn/Documents/code/crypto/bitcoin-price-analysis/artifacts/liq_exp2_full_predictions.csv",
+  "generated_at": "2026-03-20T20:35:39.872660+00:00"
 }
